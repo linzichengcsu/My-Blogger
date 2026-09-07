@@ -1,0 +1,4 @@
+# pnpm 配置（pnpm 11 从本文件读取设置）
+# 允许 esbuild 执行构建脚本（Vite 依赖其二进制）
+allowBuilds:
+  esbuild: true

@@ -35,3 +35,11 @@ build/
 /src/main/resources/db/migration/V1__create_production_indexes.sql
 /scratch.txt
 /.env
+
+### Frontend ###
+node_modules/
+frontend/node_modules/
+frontend/dist/
+.pnpm-store/
+frontend/.env.local
+frontend/.env.*.local
