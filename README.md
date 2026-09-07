@@ -25,6 +25,7 @@
 - [开发日志](#开发日志)
 - [已知问题及解决规划](#已知问题及解决规划)
 - [License](#license)
+- [鸣谢](#鸣谢)
 
 ---
 
@@ -256,3 +257,6 @@ src/main/java/csulzc/My_Personal_Blogger\
 ## 📄 License
 
 [MIT](LICENSE)
+
+## 鸣谢
+- 部分Agent Skill脚本来自知名开源库[InterviewGuide](https://github.com/Snailclimb/interview-guide)
