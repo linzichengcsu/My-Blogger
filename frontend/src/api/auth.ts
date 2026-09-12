@@ -25,7 +25,7 @@ export function register(data: UserRegisterRequest): Promise<UserDetailDTO> {
 
 /** 显式刷新 Token（返回新的 token 信息，不自动覆盖存储） */
 export function refreshToken(refreshToken: string): Promise<LoginResponseDTO> {
-  return http.get<LoginResponseDTO>('/users/refresh', { params: { refreshToken } })
+  return http.post<LoginResponseDTO>('/users/refresh', null, { params: { refreshToken } })
 }
 
 /** 登出：清理本地登录态（后端无登出接口） */

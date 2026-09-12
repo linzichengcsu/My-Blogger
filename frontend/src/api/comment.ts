@@ -12,7 +12,7 @@ import type {
 
 /* ---------------- 列表 / 详情 ---------------- */
 
-/** 获取文章顶级评论列表（公开） */
+/** 获取文章顶级评论列表（需登录，SecurityConfig 要求 /api/comments/** 全部认证） */
 export function getTopLevelComments(
   articleId: number,
   query: PageQuery = {},
@@ -20,12 +20,12 @@ export function getTopLevelComments(
   return http.get<PageResponse<CommentDTO>>(`/comments/article/${articleId}`, { params: query })
 }
 
-/** 获取评论详情（公开） */
+/** 获取评论详情（需登录） */
 export function getCommentById(commentId: number): Promise<CommentDTO> {
   return http.get<CommentDTO>(`/comments/${commentId}`)
 }
 
-/** 获取评论回复列表（公开） */
+/** 获取评论回复列表（需登录） */
 export function getCommentReplies(
   commentId: number,
   query: PageQuery = {},
@@ -33,7 +33,7 @@ export function getCommentReplies(
   return http.get<PageResponse<CommentReplyDTO>>(`/comments/${commentId}/replies`, { params: query })
 }
 
-/** 获取用户评论列表（公开） */
+/** 获取用户评论列表（需登录） */
 export function getUserComments(
   userId: number,
   query: PageQuery = {},
@@ -55,12 +55,12 @@ export function deleteComment(commentId: number): Promise<void> {
 
 /* ---------------- 统计 / 批量（管理员） ---------------- */
 
-/** 统计文章评论数（公开） */
+/** 统计文章评论数（需登录） */
 export function countCommentsByArticle(articleId: number): Promise<number> {
   return http.get<number>(`/comments/article/${articleId}/count`)
 }
 
-/** 统计用户评论数（公开） */
+/** 统计用户评论数（需登录） */
 export function countCommentsByUser(userId: number): Promise<number> {
   return http.get<number>(`/comments/user/${userId}/count`)
 }

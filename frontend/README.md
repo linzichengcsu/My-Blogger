@@ -27,8 +27,8 @@ frontend/
 │       ├── file.ts           # FileUploadResponse / Base64UploadRequest
 │       ├── dashboard.ts      # DashboardStatsDTO 及子统计
 │       └── index.ts          # 统一出口
-├── vite.config.ts            # 开发代理 /api → http://localhost:8080
-├── tsconfig.json             # 严格模式
+├── vite.config.ts            # 开发代理 /api → http://localhost:8080，并配置 '@' 别名
+├── tsconfig.json             # 严格模式 + '@/*' 路径映射
 └── package.json
 ```
 
@@ -81,6 +81,34 @@ setUnauthorizedHandler(() => {
 ```
 GET /api/articles?page=0&size=10&sortBy=createdAt&sortDirection=desc
 ```
+
+注意：只有**文章模块**使用 `PageRequestDTO`（支持 `page/size/sortBy/sortDirection`）；
+用户、分类、评论模块由 `@RequestParam` 逐个声明，仅支持 `page/size/sortBy`，
+多传 `sortDirection` 不会报错但也不会生效。
+
+### 4. 路径别名与认证要求
+
+`@/` 别名已在 `tsconfig.json`（`paths`）与 `vite.config.ts`（`resolve.alias`）中同步配置，
+可直接使用 `@/api`、`@/types`（相对导入同样可用）：
+
+```ts
+import { getArticleList } from '@/api'
+import type { ArticleListItemDTO } from '@/types'
+```
+
+接口的认证要求与后端 `SecurityConfig` 保持一致，各函数的 JSDoc 中已逐条标注：
+
+| 接口范围 | 认证要求 |
+| --- | --- |
+| `POST /api/users/register`、`/login`、`/refresh` | 公开 |
+| `GET /api/articles/**`、`GET /api/users/{id}/profile`、`GET /api/users/username/{name}` | 公开 |
+| `GET /api/users/**` 中带 `@PreAuthorize` 的接口（详情 / 活动 / 列表 / 搜索 / 统计） | ADMIN |
+| 文章写操作（含 `POST /{id}/view`、`POST /{id}/like`、批量操作） | 需登录 |
+| `/api/categories/**`、`/api/comments/**`、文件上传下载删除 | 需登录 |
+| `/api/admin/**`（含看板统计，返回 `ApiResponse<T>`） | ADMIN |
+
+> 后端 `GET /api/files/**` 在 `SecurityConfig` 中放行，但 `FileController` 方法级
+> `@PreAuthorize("isAuthenticated()")` 仍要求登录，因此下载文件同样需要 Token。
 
 ## 页面中使用示例
 

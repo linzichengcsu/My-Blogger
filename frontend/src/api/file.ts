@@ -29,7 +29,7 @@ export function uploadBase64File(data: Base64UploadRequest): Promise<FileUploadR
   return http.post<FileUploadResponse>('/files/upload-base64', data)
 }
 
-/** 下载/访问文件（返回 Blob，由调用方创建 URL 展示） */
+/** 下载/访问文件（需登录，返回 Blob，由调用方创建 URL 展示） */
 export async function downloadFile(fileName: string): Promise<Blob> {
   const res = await service.get<Blob>(`/files/${encodeURIComponent(fileName)}`, {
     responseType: 'blob',

@@ -24,12 +24,14 @@ export interface CategoryRequest {
   parentCategoryId?: number
 }
 
-/** 分类树节点（用于前端下拉选择器） */
+/** 分类树节点（用于前端下拉选择器，children 为递归子节点） */
 export interface CategoryTreeDTO {
   id?: number
   name?: string
   description?: string
   articleCount?: number
+  /** 子分类节点（后端 buildCategoryTree 递归填充，叶子节点为空数组） */
+  children?: CategoryTreeDTO[]
 }
 
 /** 分类统计（文章数、占比） */

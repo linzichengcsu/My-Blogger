@@ -1,6 +1,8 @@
 /**
  * 文章管理接口（CRUD / 发布归档 / 点赞浏览 / 批量操作 / 搜索）。
  * 对应 openapi.yaml：/api/articles/**
+ * 权限提示：SecurityConfig 仅对 GET /api/articles/** 放行（公开读取），
+ * 其余方法（POST/PUT/DELETE，包括 view 与 like）都需要认证。
  */
 import { http } from './request'
 import type { BatchIdRequest, PageQuery, PageResponse } from '../types/common'
@@ -53,24 +55,24 @@ export function likeArticle(articleId: number): Promise<void> {
   return http.post<void>(`/articles/${articleId}/like`)
 }
 
-/** 浏览文章（公开，记录浏览数） */
+/** 浏览文章（需登录，SecurityConfig 仅对 GET /api/articles/** 放行） */
 export function viewArticle(articleId: number): Promise<void> {
   return http.post<void>(`/articles/${articleId}/view`)
 }
 
-/* ---------------- 批量操作（管理员） ---------------- */
+/* ---------------- 批量操作 ---------------- */
 
-/** 批量发布文章 */
+/** 批量发布文章（后端要求登录，业务上供管理员使用） */
 export function batchPublishArticles(ids: number[]): Promise<number> {
   return http.post<number>('/articles/batch/publish', { ids } satisfies BatchIdRequest)
 }
 
-/** 批量删除文章 */
+/** 批量删除文章（后端要求登录，业务上供管理员使用） */
 export function batchDeleteArticles(ids: number[]): Promise<number> {
   return http.post<number>('/articles/batch/delete', { ids } satisfies BatchIdRequest)
 }
 
-/** 批量归档文章 */
+/** 批量归档文章（后端要求登录，业务上供管理员使用） */
 export function batchArchiveArticles(ids: number[]): Promise<number> {
   return http.post<number>('/articles/batch/archive', { ids } satisfies BatchIdRequest)
 }
