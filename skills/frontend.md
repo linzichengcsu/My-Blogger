@@ -25,9 +25,10 @@ paths:
 
 ## UI
 
-- 延续现有 React + TailwindCSS 4 风格，不引入新的 UI 框架。
-- 操作按钮优先使用 `lucide-react` 图标加清晰文本或 tooltip。
-- 表单状态要包含 loading、success、error 和 disabled 处理。
+- 组件库统一使用 Ant Design 5（`antd`）+ `@ant-design/icons`，React 19 下必须在入口引入 `@ant-design/v5-patch-for-react-19`。
+- 路由使用 `react-router-dom`，页面扁平组合 antd 组件，仅跨页面复用的元素才放入 `components/`，避免多余层级。
+- 后台页面放在 `frontend/src/pages/admin/`，主题色与 ConfigProvider 配置在 `App.tsx`。
+- 表单状态要包含 loading、success、error 和 disabled 处理；反馈统一用 antd `message`。
 - 不要把业务说明性长文塞进页面；优先让界面直接可操作。
 
 ## Verification
