@@ -3,7 +3,7 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
-  "description": "个人博客系统前端（React 19 + TypeScript + Ant Design 5 + React Router 7）",
+  "description": "行吟博客前端（React 19 + TypeScript + Ant Design 5 + React Router 7）",
   "scripts": {
     "dev": "vite",
     "build": "tsc --noEmit && vite build",

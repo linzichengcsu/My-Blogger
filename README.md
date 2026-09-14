@@ -1,14 +1,16 @@
-# My-Personal-Blogger 📝
+# Bard-Blogger 📝
 
 [![JDK](https://img.shields.io/badge/JDK-23-orange)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)](https://spring.io/projects/spring-boot)
 [![MySQL](https://img.shields.io/badge/MySQL-9.7-%23007396)](https://www.mysql.com/)
+[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 [![Redis](https://img.shields.io/badge/Redis-7.0-%23ea527f)](https://redis.io/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-个人博客系统后端服务 —— 基于 **Spring Boot 3** 构建的 RESTful API 项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
+行吟博客 —— 基于 **Spring Boot 3** 与 **React 18** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
 
-> **当前进度**：后端开发完成，开发环境所有用户业务接口测试通过。
+> **当前进度**：前端开发完成，开发环境下的前后端联调
 
 ---
 
@@ -67,7 +69,7 @@
 | 数据库 | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）         |
 | 安全 | Spring Security、JJWT 0.12.3、BCrypt           |
 | 接口文档 | springdoc-openapi 2.5.0（Swagger UI）          |
-| 前端模板 | Thymeleaf + thymeleaf-extras-springsecurity6 |
+| 前端模板 | React + TypeScript + Vite |
 | 其他 | Lombok、AOP、Actuator、CommonMark、commons-lang3 |
 
 ---
@@ -76,12 +78,15 @@
 
 ### 前置要求
 
-| 依赖 | 版本 |
-|---|---|
-| JDK | 23 |
-| Maven | 3.8+ |
-| MySQL | 8.0+ |
-| Redis | 6.0+（Docker 亦可） |
+| 依赖      | 版本 |
+|---------|---|
+| JDK     | 23 |
+| Maven   | 3.8+ |
+| MySQL   | 8.0+ |
+| Redis   | 6.0+（Docker 亦可） |
+| Node.js | 18.0+ |
+| pnpm    | 7.0+ |
+| React   | 18.2.0 |
 
 ### 1. 克隆项目
 ```bash
@@ -108,7 +113,14 @@ export SPRING_REDIS_PORT=6379
 mvn spring-boot:run
 ```
 
-### 4. 验证
+### 5. 启动前端React项目
+```bash
+cd frontend
+pnpm install
+pnpm run dev
+```
+
+### 6. 验证
 
 | 地址 | 说明                     |
 |---|------------------------|
@@ -233,12 +245,12 @@ src/main/java/csulzc/My_Personal_Blogger\
 - 7月22日：显式编写 openapi.yaml，进入 Apifox 联调准备阶段
 - 8月15日：开始用户与鉴权部分联调，按实际业务增补 API
 - 9月2日：用户业务接口测试完成（管理员接口由于不对外暴露，将在日后逐步测试）
+- 9月14日：React简易前端页面开发完成
 
 ## 🐞 已知问题及解决规划
 ### **功能收尾**
 | 问题 | 现状与影响 | 解决规划 | 优先级 | 状态  |
 |---|---|---|---|-----|
-| 管理员接口测试未覆盖 | Admin 模块仅部分测试，管理端未对外暴露 | 补齐 AdminController/AdminService 测试 | P1 | 计划中 |
 | 自动化接口测试脚本 | 目前依赖手工联调（Apifox），回归成本高 | 已新增 `ApiIntegrationTest` 接口自动化脚本，待接入 CI | P2 | 脚本已编写，待接入 CI |
 
 ### **架构与技术演进**

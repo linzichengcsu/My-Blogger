@@ -85,7 +85,7 @@ export default function SiteLayout() {
           onClick={() => navigate(ROUTES.home)}
         >
           <BookOutlined />
-          个人博客
+          行吟博客
         </Space>
 
         <Input
