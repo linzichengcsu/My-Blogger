@@ -22,14 +22,14 @@ public class Category extends BaseEntity {
 
     // 与其他类的关联关系（索引关系）
 
-    // 1. 多对多：分类和文章的关系
+    // 1. 多对多：收藏夹和文章的关系
     @ManyToMany(mappedBy = "categories")
     @ToString.Exclude
     @EqualsAndHashCode.Exclude
     @Builder.Default
     private Set<Article> articles = new HashSet<>();
 
-    // 2. 自关联：分类的层级结构
+    // 2. 自关联：收藏夹的层级结构
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_category_id")
     private Category parentCategory;

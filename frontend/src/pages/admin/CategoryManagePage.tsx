@@ -1,5 +1,5 @@
 /**
- * 分类管理：分页表格 + 新建/编辑弹窗（父分类树选）+ 删除时可选转移文章。
+ * 收藏夹管理：分页表格 + 新建/编辑弹窗（父收藏夹树选）+ 删除时可选转移文章。
  */
 import { useCallback, useEffect, useState } from 'react'
 import {
@@ -39,7 +39,7 @@ function toTreeData(nodes: CategoryTreeDTO[] = []): NonNullable<React.ComponentP
   }))
 }
 
-/** 拍平分类树供普通下拉使用 */
+/** 拍平收藏夹树供普通下拉使用 */
 function flattenTree(nodes: CategoryTreeDTO[] = [], depth = 0): { label: string; value: number }[] {
   return nodes.flatMap((n) => [
     { label: `${'\u00A0\u00A0'.repeat(depth)}${depth ? '└ ' : ''}${n.name}`, value: n.id! },
@@ -100,7 +100,7 @@ export default function CategoryManagePage() {
     try {
       if (editingId) await updateCategory(editingId, values)
       else await createCategory(values)
-      message.success(editingId ? '分类已更新' : '分类已创建')
+      message.success(editingId ? '收藏夹已更新' : '收藏夹已创建')
       setFormOpen(false)
       void load()
     } catch (err) {
@@ -114,7 +114,7 @@ export default function CategoryManagePage() {
     try {
       if (transferTo) await deleteCategoryAndTransferArticles(deleteTarget!.id!, transferTo)
       else await deleteCategory(deleteTarget!.id!)
-      message.success('分类已删除')
+      message.success('收藏夹已删除')
       setDeleteTarget(null)
       setTransferTo(undefined)
       void load()
@@ -126,7 +126,7 @@ export default function CategoryManagePage() {
   const columns: TableProps<CategoryDTO>['columns'] = [
     { title: 'ID', dataIndex: 'id', width: 70 },
     { title: '名称', dataIndex: 'name', width: 160 },
-    { title: '父分类', dataIndex: 'parentCategoryName', width: 140, render: (v: string) => v || '-' },
+    { title: '父收藏夹', dataIndex: 'parentCategoryName', width: 140, render: (v: string) => v || '-' },
     { title: '描述', dataIndex: 'description', ellipsis: true, render: (v: string) => v || '-' },
     { title: '文章数', dataIndex: 'articleCount', width: 90 },
     { title: '创建时间', dataIndex: 'createdAt', width: 110, render: (v: string) => formatDate(v) },
@@ -144,9 +144,9 @@ export default function CategoryManagePage() {
 
   return (
     <Card>
-      <Title level={5} style={{ marginTop: 0 }}>分类管理</Title>
+      <Title level={5} style={{ marginTop: 0 }}>收藏夹管理</Title>
       <Space style={{ marginBottom: 16 }}>
-        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建分类</Button>
+        <Button type="primary" icon={<PlusOutlined />} onClick={openCreate}>新建收藏夹</Button>
       </Space>
 
       <Table
@@ -164,7 +164,7 @@ export default function CategoryManagePage() {
       />
 
       <Modal
-        title={editingId ? '编辑分类' : '新建分类'}
+        title={editingId ? '编辑收藏夹' : '新建收藏夹'}
         open={formOpen}
         onOk={submit}
         confirmLoading={saving}
@@ -172,39 +172,39 @@ export default function CategoryManagePage() {
         destroyOnClose
       >
         <Form form={form} layout="vertical" style={{ marginTop: 16 }}>
-          <Form.Item name="name" label="分类名称" rules={[
-            { required: true, message: '请输入分类名称' },
+          <Form.Item name="name" label="收藏夹名称" rules={[
+            { required: true, message: '请输入收藏夹名称' },
             { min: 2, max: 20, message: '名称长度 2-20 个字符' },
           ]}>
             <Input placeholder="2-20 个字符" maxLength={20} />
           </Form.Item>
-          <Form.Item name="parentCategoryId" label="父分类">
+          <Form.Item name="parentCategoryId" label="父收藏夹">
             <TreeSelect
               treeData={toTreeData(tree)}
               treeDefaultExpandAll
               allowClear
-              placeholder="不选则为顶级分类"
+              placeholder="不选则为顶级收藏夹"
             />
           </Form.Item>
           <Form.Item name="description" label="描述">
-            <Input.TextArea rows={3} maxLength={200} showCount placeholder="分类描述（可选）" />
+            <Input.TextArea rows={3} maxLength={200} showCount placeholder="收藏夹描述（可选）" />
           </Form.Item>
         </Form>
       </Modal>
 
       <Modal
-        title="删除分类"
+        title="删除收藏夹"
         open={Boolean(deleteTarget)}
         onOk={confirmDelete}
         onCancel={() => { setDeleteTarget(null); setTransferTo(undefined) }}
         okText="确认删除"
         okButtonProps={{ danger: true }}
       >
-        <p>确认删除分类「<b>{deleteTarget?.name}</b>」吗？</p>
-        <p style={{ color: '#999', marginBottom: 8 }}>可先将其下文章转移到其他分类（不选则直接删除）：</p>
+        <p>确认删除收藏夹「<b>{deleteTarget?.name}</b>」吗？</p>
+        <p style={{ color: '#999', marginBottom: 8 }}>可先将其下文章转移到其他收藏夹（不选则直接移除关联）：</p>
         <Select
           style={{ width: '100%' }}
-          placeholder="选择目标分类（可选）"
+          placeholder="选择目标收藏夹（可选）"
           allowClear
           options={flattenTree(tree).filter((c) => c.value !== deleteTarget?.id)}
           value={transferTo}

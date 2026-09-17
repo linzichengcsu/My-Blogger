@@ -28,28 +28,28 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
-    // ==================== 分类创建与更新 ====================
+    // ==================== 收藏夹创建与更新 ====================
 
     /**
-     * 创建分类
+     * 创建收藏夹
      */
     @CacheEvict(cacheNames = {"category:list", "category:tree"}, allEntries = true)
     @Transactional(timeout = 30)
     public CategoryDTO createCategory(CategoryRequest request) {
-        // 检查分类名称是否已存在
+        // 检查收藏夹名称是否已存在
         if (categoryRepository.findByName(request.getName()).isPresent()) {
-            throw new IllegalArgumentException("分类名称已存在");
+            throw new IllegalArgumentException("收藏夹名称已存在");
         }
 
-        // 构建分类实体
+        // 构建收藏夹实体
         Category.CategoryBuilder categoryBuilder = Category.builder()
                 .name(request.getName())
                 .description(request.getDescription());
 
-        // 设置父分类
+        // 设置父收藏夹
         if (request.getParentCategoryId() != null) {
             Category parentCategory = categoryRepository.findById(request.getParentCategoryId())
-                    .orElseThrow(() -> new EntityNotFoundException("父分类不存在"));
+                    .orElseThrow(() -> new EntityNotFoundException("父收藏夹不存在"));
             categoryBuilder.parentCategory(parentCategory);
         } else {
             categoryBuilder.parentCategory(null);
@@ -62,37 +62,37 @@ public class CategoryService {
     }
 
     /**
-     * 更新分类信息
+     * 更新收藏夹信息
      */
     @CacheEvict(cacheNames = {"category:detail", "category:tree", "category:list"}, allEntries = true)
     @Transactional(timeout = 30)
     public CategoryDTO updateCategory(Long categoryId, CategoryRequest request) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
 
-        // 检查新名称是否与其他分类重复
+        // 检查新名称是否与其他收藏夹重复
         categoryRepository.findByName(request.getName())
                 .filter(c -> !c.getId().equals(categoryId))
                 .ifPresent(c -> {
-                    throw new IllegalArgumentException("分类名称已存在");
+                    throw new IllegalArgumentException("收藏夹名称已存在");
                 });
 
         // 更新字段
         category.setName(request.getName());
         category.setDescription(request.getDescription());
 
-        // 更新父分类
+        // 更新父收藏夹
         if (request.getParentCategoryId() != null) {
             if (request.getParentCategoryId().equals(categoryId)) {
-                throw new IllegalArgumentException("不能将自己设置为父分类");
+                throw new IllegalArgumentException("不能将自己设置为父收藏夹");
             }
 
             Category parentCategory = categoryRepository.findById(request.getParentCategoryId())
-                    .orElseThrow(() -> new EntityNotFoundException("父分类不存在"));
+                    .orElseThrow(() -> new EntityNotFoundException("父收藏夹不存在"));
 
             // 检查是否会形成循环引用
             if (isChildCategory(parentCategory, category)) {
-                throw new IllegalArgumentException("不能将子分类设置为父分类，会形成循环引用");
+                throw new IllegalArgumentException("不能将子收藏夹设置为父收藏夹，会形成循环引用");
             }
 
             category.setParentCategory(parentCategory);
@@ -104,30 +104,30 @@ public class CategoryService {
         return convertToDTO(updatedCategory);
     }
 
-    // ==================== 分类查询 ====================
+    // ==================== 收藏夹查询 ====================
 
     /**
-     * 根据 ID 获取分类详情
+     * 根据 ID 获取收藏夹详情
      */
     @Cacheable(cacheNames = "category:detail", key = "#categoryId")
     public CategoryDTO getCategoryById(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
         return convertToDTO(category);
     }
 
     /**
-     * 根据名称获取分类
+     * 根据名称获取收藏夹
      */
     @Cacheable(cacheNames = "category:detail", key = "#name")
     public CategoryDTO getCategoryByName(String name) {
         Category category = categoryRepository.findByName(name)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
         return convertToDTO(category);
     }
 
     /**
-     * 获取所有顶级分类（没有父分类的分类）
+     * 获取所有顶级收藏夹（没有父收藏夹的收藏夹）
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getAllTopLevelCategories() {
@@ -138,12 +138,12 @@ public class CategoryService {
     }
 
     /**
-     * 获取某个分类的所有子分类
+     * 获取某个收藏夹的所有子收藏夹
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getSubCategories(Long parentCategoryId) {
         Category parent = categoryRepository.findById(parentCategoryId)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
 
         return categoryRepository.findByParentCategory(parent).stream()
                 .map(this::convertToDTO)
@@ -151,7 +151,7 @@ public class CategoryService {
     }
 
     /**
-     * 分页查询所有分类
+     * 分页查询所有收藏夹
      */
     @Cacheable(cacheNames = "category:list")
     public PageResponseDTO<CategoryDTO> getAllCategories(int page, int size, String sortBy) {
@@ -173,16 +173,16 @@ public class CategoryService {
                 .build();
     }
 
-    // ==================== 分类树管理 ====================
+    // ==================== 收藏夹树管理 ====================
 
     /**
-     * 构建分类树（用于前端下拉树形选择器）
+     * 构建收藏夹树（用于前端下拉树形选择器）
      */
     @Cacheable(cacheNames = "category:tree")
     public List<CategoryTreeDTO> buildCategoryTree() {
         List<Category> allCategories = categoryRepository.findAll();
 
-        // 找到所有顶级分类
+        // 找到所有顶级收藏夹
         List<Category> topCategories = allCategories.stream()
                 .filter(c -> c.getParentCategory() == null)
                 .collect(Collectors.toList());
@@ -194,7 +194,7 @@ public class CategoryService {
     }
 
     /**
-     * 递归构建分类树节点
+     * 递归构建收藏夹树节点
      */
     private CategoryTreeDTO buildCategoryTreeNode(Category category, List<Category> allCategories) {
         CategoryTreeDTO node = CategoryTreeDTO.builder()
@@ -205,7 +205,7 @@ public class CategoryService {
                 .children(new ArrayList<>())
                 .build();
 
-        // 查找直接子分类
+        // 查找直接子收藏夹
         List<Category> directChildren = allCategories.stream()
                 .filter(c -> category.equals(c.getParentCategory()))
                 .collect(Collectors.toList());
@@ -220,12 +220,12 @@ public class CategoryService {
     }
 
     /**
-     * 获取分类的完整路径（从根到当前分类）
+     * 获取收藏夹的完整路径（从根到当前收藏夹）
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getCategoryPath(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
 
         List<CategoryDTO> path = new ArrayList<>();
         Category current = category;
@@ -238,10 +238,10 @@ public class CategoryService {
         return path;
     }
 
-    // ==================== 分类统计 ====================
+    // ==================== 收藏夹统计 ====================
 
     /**
-     * 获取所有分类及其文章数量
+     * 获取所有收藏夹及其文章数量
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryStatDTO> getCategoryStatistics() {
@@ -250,7 +250,7 @@ public class CategoryService {
         return results.stream()
                 .map(obj -> {
                     if (obj[0] == null) {
-                        throw new IllegalStateException("分类统计结果异常");
+                        throw new IllegalStateException("收藏夹统计结果异常");
                     }
                     Category category = (Category) obj[0];
                     Long articleCount = (Long) obj[1];
@@ -263,18 +263,18 @@ public class CategoryService {
     }
 
     /**
-     * 计算分类的文章数量（包含子分类的文章）
+     * 计算收藏夹的文章数量（包含子收藏夹的文章）
      */
     @Cacheable(cacheNames = "category:list")
     public long countArticlesInCategoryIncludingSubCategories(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
 
         return countArticlesRecursive(category);
     }
 
     /**
-     * 递归计算分类及其子分类的文章总数
+     * 递归计算收藏夹及其子收藏夹的文章总数
      */
     private long countArticlesRecursive(Category category) {
         long count = category.getArticles().size();
@@ -290,14 +290,14 @@ public class CategoryService {
     }
 
     /**
-     * 计算分类的文章数量（不包含子分类）
+     * 计算收藏夹的文章数量（不包含子收藏夹）
      */
     private int countArticlesInCategory(Category category) {
         return category.getArticles() != null ? category.getArticles().size() : 0;
     }
 
     /**
-     * 获取分类的文章占比统计
+     * 获取收藏夹的文章占比统计
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryStatDTO> getCategoryPercentageStats() {
@@ -319,31 +319,31 @@ public class CategoryService {
         return stats;
     }
 
-    // ==================== 分类删除 ====================
+    // ==================== 收藏夹删除 ====================
 
     /**
-     * 删除分类（如果分类下有文章或子分类，则不允许删除）
+     * 删除收藏夹（如果收藏夹下有文章或子收藏夹，则不允许删除）
      */
     @CacheEvict(cacheNames = {"category:list", "category:tree"}, allEntries = true)
     @Transactional(timeout = 30)
     public void deleteCategory(Long categoryId) {
         Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
 
         Hibernate.initialize(category.getArticles());
         Hibernate.initialize(category.getSubCategories());
 
         // 检查是否有文章关联
         if (!category.getArticles().isEmpty()) {
-            throw new IllegalStateException("该分类下还有文章，无法删除");
+            throw new IllegalStateException("该收藏夹下还有文章，无法删除");
         }
 
-        // 检查是否有子分类
+        // 检查是否有子收藏夹
         if (!category.getSubCategories().isEmpty()) {
-            throw new IllegalStateException("该分类还有子分类，无法删除");
+            throw new IllegalStateException("该收藏夹还有子收藏夹，无法删除");
         }
 
-        // 如果有父分类，需要从父分类的子分类列表中移除
+        // 如果有父收藏夹，需要从父收藏夹的子收藏夹列表中移除
         Category parentCategory = category.getParentCategory();
         if (parentCategory != null) {
             if (parentCategory.getSubCategories() != null) {
@@ -356,26 +356,26 @@ public class CategoryService {
     }
 
     /**
-     * 删除分类并转移文章到指定分类
+     * 删除收藏夹并转移文章到指定收藏夹
      */
     @CacheEvict(cacheNames = {"category:list", "category:tree"}, allEntries = true)
     @Transactional(timeout = 30)
     public void deleteCategoryAndTransferArticles(Long categoryId, Long targetCategoryId) {
         Category sourceCategory = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("源分类不存在"));
+                .orElseThrow(() -> new EntityNotFoundException("源收藏夹不存在"));
 
         Hibernate.initialize(sourceCategory.getArticles());
         Hibernate.initialize(sourceCategory.getSubCategories());
 
-        // 检查是否有子分类
+        // 检查是否有子收藏夹
         if (!sourceCategory.getSubCategories().isEmpty()) {
-            throw new IllegalStateException("该分类还有子分类，请先删除或转移子分类");
+            throw new IllegalStateException("该收藏夹还有子收藏夹，请先删除或转移子收藏夹");
         }
 
-        // 如果有目标分类，转移文章；否则直接移除关联
+        // 如果有目标收藏夹，转移文章；否则直接移除关联
         if (targetCategoryId != null) {
             Category targetCategory = categoryRepository.findById(targetCategoryId)
-                    .orElseThrow(() -> new EntityNotFoundException("目标分类不存在"));
+                    .orElseThrow(() -> new EntityNotFoundException("目标收藏夹不存在"));
 
             transferArticlesToTargetCategory(sourceCategory, targetCategory);
         } else {
@@ -399,10 +399,10 @@ public class CategoryService {
     }
 
 
-    // ==================== 分类搜索 ====================
+    // ==================== 收藏夹搜索 ====================
 
     /**
-     * 搜索分类（根据名称或描述）
+     * 搜索收藏夹（根据名称或描述）
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> searchCategories(String keyword) {
@@ -421,7 +421,7 @@ public class CategoryService {
     }
 
     /**
-     * 获取有文章的分类列表
+     * 获取有文章的收藏夹列表
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getCategoriesWithArticles() {
@@ -434,7 +434,7 @@ public class CategoryService {
     // ==================== 辅助方法 ====================
 
     /**
-     * 检查是否是子分类（避免循环引用）
+     * 检查是否是子收藏夹（避免循环引用）
      */
     private boolean isChildCategory(Category potentialChild, Category potentialParent) {
         Category current = potentialChild;
@@ -458,13 +458,13 @@ public class CategoryService {
                 .articleCount(countArticlesInCategory(category))
                 .build();
 
-        // 设置父分类信息
+        // 设置父收藏夹信息
         if (category.getParentCategory() != null) {
             dto.setParentCategoryId(category.getParentCategory().getId());
             dto.setParentCategoryName(category.getParentCategory().getName());
         }
 
-        // 设置子分类列表（只转换一层，避免无限递归）
+        // 设置子收藏夹列表（只转换一层，避免无限递归）
         if (!category.getSubCategories().isEmpty()) {
             List<CategoryDTO> subCategoryDTOs = category.getSubCategories().stream()
                     .map(sub -> CategoryDTO.builder()
@@ -481,7 +481,7 @@ public class CategoryService {
     }
 
     /**
-     * 检查分类名称是否存在（排除指定 ID）
+     * 检查收藏夹名称是否存在（排除指定 ID）
      */
     @Cacheable(cacheNames = "category:list")
     public boolean existsByName(String name, Long excludeId) {
@@ -491,7 +491,7 @@ public class CategoryService {
     }
 
     /**
-     * 检查分类名称是否存在
+     * 检查收藏夹名称是否存在
      */
     @Cacheable(cacheNames = "category:list")
     public boolean existsByName(String name) {
@@ -499,7 +499,7 @@ public class CategoryService {
     }
 
     /**
-     * 获取分类总数
+     * 获取收藏夹总数
      */
     @Cacheable(cacheNames = "category:list")
     public long getTotalCategoryCount() {
@@ -507,7 +507,7 @@ public class CategoryService {
     }
 
     /**
-     * 获取顶级分类数量
+     * 获取顶级收藏夹数量
      */
     @Cacheable(cacheNames = "category:list")
     public long getTopLevelCategoryCount() {

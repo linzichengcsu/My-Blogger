@@ -1,8 +1,8 @@
 /**
- * 分类模块类型（对齐 openapi.yaml 分类管理相关 schema）。
+ * 收藏夹模块类型（原“分类”，已降级为用户收藏夹，对齐 openapi.yaml 相关 schema）。
  */
 
-/** 分类 */
+/** 收藏夹 */
 export interface CategoryDTO {
   id?: number
   createdAt?: string
@@ -12,11 +12,11 @@ export interface CategoryDTO {
   parentCategoryId?: number
   parentCategoryName?: string
   articleCount?: number
-  /** 子分类（树形返回时嵌套） */
+  /** 子收藏夹（树形返回时嵌套） */
   subCategories?: CategoryDTO[]
 }
 
-/** 创建/更新分类请求 */
+/** 创建/更新收藏夹请求 */
 export interface CategoryRequest {
   /** 2-20 字符，必填 */
   name: string
@@ -24,17 +24,17 @@ export interface CategoryRequest {
   parentCategoryId?: number
 }
 
-/** 分类树节点（用于前端下拉选择器，children 为递归子节点） */
+/** 收藏夹树节点（用于前端下拉选择器，children 为递归子节点） */
 export interface CategoryTreeDTO {
   id?: number
   name?: string
   description?: string
   articleCount?: number
-  /** 子分类节点（后端 buildCategoryTree 递归填充，叶子节点为空数组） */
+  /** 子节点（后端 buildCategoryTree 递归填充，叶子节点为空数组） */
   children?: CategoryTreeDTO[]
 }
 
-/** 分类统计（文章数、占比） */
+/** 收藏夹统计（文章数、占比） */
 export interface CategoryStatDTO {
   categoryName?: string
   articleCount?: number

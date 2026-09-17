@@ -85,7 +85,7 @@ export default function ArticleManagePage() {
       render: (_: unknown, row) => displayName(row.author?.displayName, row.author?.username),
     },
     {
-      title: '分类',
+      title: '收藏夹',
       dataIndex: 'categories',
       width: 160,
       render: (_: unknown, row: ArticleListItemDTO) => (

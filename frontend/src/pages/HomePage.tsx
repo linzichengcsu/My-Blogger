@@ -1,7 +1,7 @@
 /**
  * 首页：文章信息流 + 右侧边栏。
  * 支持 URL 驱动的关键词搜索与分页（?keyword=&page=），
- * 分类接口需要登录，侧栏分类直接从已加载文章中聚合，点击走搜索。
+ * 收藏夹接口需要登录，侧栏收藏夹直接从已加载文章中聚合，点击走搜索。
  */
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { Card, Col, Empty, Pagination, Row, Skeleton, Space, Tag, Typography, Button } from 'antd'
@@ -42,7 +42,7 @@ export default function HomePage() {
     void load()
   }, [load])
 
-  /** 从当前数据聚合分类（名称 -> 出现次数） */
+  /** 从当前数据聚合收藏夹（名称 -> 出现次数） */
   const hotCategories = useMemo(() => {
     const counter = new Map<string, number>()
     data?.content.forEach((a) =>
@@ -106,9 +106,9 @@ export default function HomePage() {
           )}
         </Card>
 
-        <Card title={<Space><FireOutlined style={{ color: '#fa541c' }} />热门分类</Space>}>
+        <Card title={<Space><FireOutlined style={{ color: '#fa541c' }} />热门收藏夹</Space>}>
           {hotCategories.length === 0 ? (
-            <Text type="secondary">暂无分类数据</Text>
+            <Text type="secondary">暂无收藏夹数据</Text>
           ) : (
             <Space size={[8, 8]} wrap>
               {hotCategories.map(([name, count]) => (

@@ -16,7 +16,7 @@ import { ROUTES } from '@/constants/routes'
 const items = [
   { key: ROUTES.adminDashboard, icon: <DashboardOutlined />, label: '数据看板' },
   { key: ROUTES.adminArticles, icon: <FileTextOutlined />, label: '文章管理' },
-  { key: ROUTES.adminCategories, icon: <AppstoreOutlined />, label: '分类管理' },
+  { key: ROUTES.adminCategories, icon: <AppstoreOutlined />, label: '收藏夹管理' },
   { key: ROUTES.adminComments, icon: <MessageOutlined />, label: '评论审核' },
   { key: ROUTES.adminUsers, icon: <TeamOutlined />, label: '用户管理' },
 ]

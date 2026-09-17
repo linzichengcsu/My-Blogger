@@ -7,7 +7,7 @@ import lombok.experimental.SuperBuilder;
 import java.util.List;
 
 /**
- * 分类树DTO（用于前端下拉树）
+ * 收藏夹树DTO（用于前端下拉树）
  */
 @Data
 @SuperBuilder

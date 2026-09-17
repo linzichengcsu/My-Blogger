@@ -9,7 +9,7 @@ import lombok.NoArgsConstructor;
 import java.util.List;
 
 /**
- * 分类DTO
+ * 收藏夹DTO
  */
 @Data
 @SuperBuilder

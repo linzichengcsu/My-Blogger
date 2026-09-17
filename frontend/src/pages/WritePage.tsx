@@ -1,6 +1,6 @@
 /**
  * 写文章 / 编辑文章（/write 与 /edit/:id 共用）。
- * 左表单右预览的双栏写作页：分类树拉取后拍平为多选，封面走 /files/upload。
+ * 左表单右预览的双栏写作页：收藏夹树拉取后拍平为多选（可选），封面走 /files/upload。
  */
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -35,7 +35,7 @@ type ArticleForm = Omit<ArticleCreateRequest, 'status'> & { status: ArticleStatu
 /** customRequest 入参类型，直接从 antd 推导，避免依赖 rc-upload 内部路径 */
 type UploadRequestOption = Parameters<NonNullable<UploadProps['customRequest']>>[0]
 
-/** 拍平分类树为 Select options（按层级缩进） */
+/** 拍平收藏夹树为 Select options（按层级缩进） */
 function flattenTree(nodes: CategoryTreeDTO[] = [], depth = 0): { label: string; value: number }[] {
   return nodes.flatMap((n) => [
     { label: `${'\u00A0\u00A0'.repeat(depth)}${depth ? '└ ' : ''}${n.name}`, value: n.id! },
@@ -154,12 +154,13 @@ export default function WritePage() {
 
         <Col xs={24} lg={10}>
           <Card title="发布设置" style={{ marginBottom: 16 }}>
-            <Form.Item name="categoryIds" rules={[{ required: true, message: '至少选择一个分类' }]}>
+            <Form.Item name="categoryIds" label="收藏夹">
               <Select
                 mode="multiple"
                 options={categoryOptions}
-                placeholder="选择分类（可多选）"
-                notFoundContent={tree.length === 0 ? '暂无可用分类' : undefined}
+                placeholder="选择收藏夹（可选，可多选）"
+                allowClear
+                notFoundContent={tree.length === 0 ? '暂无可用收藏夹' : undefined}
               />
             </Form.Item>
             <Form.Item name="tags" label="标签">

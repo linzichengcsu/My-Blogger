@@ -52,8 +52,8 @@ export interface ArticleCreateRequest {
   /** 摘要，最多 200 字符 */
   summary?: string
   coverImage?: string
-  /** 至少 1 个分类 */
-  categoryIds: number[]
+  /** 收藏夹 ID 列表（可选，原分类字段已降级为用户收藏夹） */
+  categoryIds?: number[]
   /** 默认 DRAFT */
   status?: ArticleStatus
   tags?: string[]

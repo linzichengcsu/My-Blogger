@@ -27,8 +27,9 @@ public class ArticleCreateRequest {
 
     private String coverImage;  // 封面图URL
 
-    @NotNull(message = "分类不能为空")
-    @Size(min = 1, message = "至少选择一个分类")
+    /**
+     * 收藏夹 ID 列表（可选，原分类字段已降级为用户收藏夹）
+     */
     private Set<Long> categoryIds;
 
     private Article.ArticleStatus status = Article.ArticleStatus.DRAFT;

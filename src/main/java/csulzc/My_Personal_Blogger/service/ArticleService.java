@@ -55,7 +55,7 @@ public class ArticleService {
                     .collect(Collectors.toSet());
 
             if (categories.size() != request.getCategoryIds().size()) {
-                throw new EntityNotFoundException("部分分类不存在");
+                throw new EntityNotFoundException("部分收藏夹不存在");
             }
 
             categories.forEach(article::addCategory);
@@ -110,7 +110,7 @@ public class ArticleService {
             Set<Category> newCategories = new HashSet<>(categoryRepository.findAllById(request.getCategoryIds()));
 
             if (newCategories.size() != request.getCategoryIds().size()) {
-                throw new EntityNotFoundException("部分分类不存在");
+                throw new EntityNotFoundException("部分收藏夹不存在");
             }
 
             newCategories.forEach(article::addCategory);

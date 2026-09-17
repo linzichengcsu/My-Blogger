@@ -22,7 +22,10 @@ public class ArticleUpdateRequest {
 
     private String coverImage;
 
-    @Size(min = 1, message = "至少选择一个分类")
+    /**
+     * 收藏夹 ID 列表（可选，原分类字段已降级为用户收藏夹）
+     * 传 null 表示不修改；传空集合表示清空收藏夹
+     */
     private Set<Long> categoryIds;
 
     private Article.ArticleStatus status;
