@@ -1,14 +1,14 @@
 # Bard-Blogger 📝
 
 [![JDK](https://img.shields.io/badge/JDK-23-orange)](https://www.oracle.com/java/)
-[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-3.2.5-brightgreen)](https://spring.io/projects/spring-boot)
+[![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)](https://spring.io/projects/spring-boot)
 [![MySQL](https://img.shields.io/badge/MySQL-9.7-%23007396)](https://www.mysql.com/)
 [![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 [![Redis](https://img.shields.io/badge/Redis-7.0-%23ea527f)](https://redis.io/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-行吟博客 —— 基于 **Spring Boot 3** 与 **React 18** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
+行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 18.2.0** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
 
 > **当前进度**：前端开发完成，正在开发环境全量试运行阶段
 
@@ -64,12 +64,12 @@
 
 | 类别 | 技术                                           |
 |---|----------------------------------------------|
-| 语言 / 框架 | Java 23、Spring Boot 3.2.5                    |
+| 语言 / 框架 | Java 23、Spring Boot 4.1.1                    |
 | 持久层 | Spring Data JPA (Hibernate 6)、Flyway         |
 | 数据库 | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）         |
 | 安全 | Spring Security、JJWT 0.12.3、BCrypt           |
 | 接口文档 | springdoc-openapi 2.5.0（Swagger UI）          |
-| 前端模板 | React + TypeScript + Vite |
+| 前端模板 | React + TypeScript + Vite                    |
 | 其他 | Lombok、AOP、Actuator、CommonMark、commons-lang3 |
 
 ---

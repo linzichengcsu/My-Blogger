@@ -1,9 +1,7 @@
 package csulzc.My_Personal_Blogger.config;
 
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.SerializationFeature;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.jsontype.BasicPolymorphicTypeValidator;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -12,7 +10,7 @@ import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.GenericJackson2JsonRedisSerializer;
+import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
 import org.springframework.data.redis.serializer.RedisSerializationContext;
 import org.springframework.data.redis.serializer.RedisSerializer;
 
@@ -54,18 +52,16 @@ public class RedisConfig {
                 .build();
     }
 
-    private GenericJackson2JsonRedisSerializer jsonSerializer() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        // 支持 LocalDateTime 等 JSR-310 类型
-        objectMapper.registerModule(new JavaTimeModule());
-        objectMapper.disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS);
-        // 关键：显式激活默认类型（@class 属性）。
-        // GenericJackson2JsonRedisSerializer(ObjectMapper) 构造器不会自动配置 default typing，
-        // 不激活则反序列化时无法恢复为原始 DTO 类型，会退化为 LinkedHashMap 并抛 ClassCastException
-        objectMapper.activateDefaultTyping(
-                objectMapper.getPolymorphicTypeValidator(),
-                ObjectMapper.DefaultTyping.NON_FINAL,
-                JsonTypeInfo.As.PROPERTY);
-        return new GenericJackson2JsonRedisSerializer(objectMapper);
+    private GenericJacksonJsonRedisSerializer jsonSerializer() {
+        // Jackson 3 迁移：JSR-310 时间类型支持已内置于 jackson-databind 核心（通过
+        // JavaTimeInitializer 自动注册），无需显式注册 JavaTimeModule。
+        // GenericJacksonJsonRedisSerializer 默认不启用 default typing，需通过 builder 显式启用，
+        // 否则反序列化时无法恢复原始 DTO 类型，会退化为 LinkedHashMap 并抛 ClassCastException。
+        return GenericJacksonJsonRedisSerializer.builder()
+                .enableDefaultTyping(
+                        BasicPolymorphicTypeValidator.builder()
+                                .allowIfBaseType(Object.class)
+                                .build())
+                .build();
     }
 }

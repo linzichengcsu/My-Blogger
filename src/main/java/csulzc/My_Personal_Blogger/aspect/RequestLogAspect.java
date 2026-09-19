@@ -1,6 +1,6 @@
 package csulzc.My_Personal_Blogger.aspect;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.api.response.Result;
 import jakarta.servlet.http.HttpServletRequest;

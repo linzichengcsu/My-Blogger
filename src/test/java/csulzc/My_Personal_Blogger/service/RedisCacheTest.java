@@ -19,9 +19,9 @@ import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.aop.AopAutoConfiguration;
-import org.springframework.boot.autoconfigure.data.redis.RedisAutoConfiguration;
-import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
-import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
+import org.springframework.boot.data.redis.autoconfigure.DataRedisAutoConfiguration;
+import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
+import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.interceptor.SimpleKey;
@@ -48,7 +48,7 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
  */
 @DataJpaTest
 @ActiveProfiles("test")
-@ImportAutoConfiguration({AopAutoConfiguration.class, RedisAutoConfiguration.class})
+@ImportAutoConfiguration({AopAutoConfiguration.class, DataRedisAutoConfiguration.class})
 @Import({RedisConfig.class, ArticleService.class, CategoryService.class, SecurityContextUtil.class})
 @TestPropertySource(properties = "app.cache.enabled=true")
 @DisplayName("Redis 缓存测试")

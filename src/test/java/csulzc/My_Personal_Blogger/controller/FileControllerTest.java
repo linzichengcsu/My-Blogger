@@ -1,6 +1,6 @@
 package csulzc.My_Personal_Blogger.controller;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
+import tools.jackson.databind.ObjectMapper;
 import csulzc.My_Personal_Blogger.api.dto.common.FileUploadResponse;
 import csulzc.My_Personal_Blogger.config.JwtProperties;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
@@ -8,9 +8,9 @@ import csulzc.My_Personal_Blogger.service.FileStorageService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
@@ -56,7 +56,7 @@ class FileControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
+    @MockitoBean
     private FileStorageService fileStorageService;
 
     private FileUploadResponse uploadResponse;

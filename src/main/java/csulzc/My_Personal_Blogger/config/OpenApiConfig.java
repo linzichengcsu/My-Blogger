@@ -18,7 +18,7 @@ public class OpenApiConfig {
         return new OpenAPI()
                 .info(new Info()
                         .title("个人博客系统 API 文档")
-                        .description("基于 Spring Boot 3.2.5 构建的个人博客系统 RESTful API")
+                        .description("基于 Spring Boot 4.1.1 构建的个人博客系统 RESTful API")
                         .version("1.0.0")
                         .contact(new Contact()
                                 .name("林子诚")
