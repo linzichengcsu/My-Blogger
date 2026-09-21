@@ -3,6 +3,8 @@ package csulzc.My_Personal_Blogger.api.dto.user;
 import csulzc.My_Personal_Blogger.domain.entity.User;
 import lombok.Data;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import jakarta.validation.constraints.*;
 
 /**
@@ -10,6 +12,8 @@ import jakarta.validation.constraints.*;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserRegisterRequest {
 
     @NotBlank(message = "用户名不能为空")

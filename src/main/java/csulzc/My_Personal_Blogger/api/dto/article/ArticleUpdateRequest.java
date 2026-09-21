@@ -2,6 +2,8 @@ package csulzc.My_Personal_Blogger.api.dto.article;
 
 import lombok.Data;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import csulzc.My_Personal_Blogger.domain.entity.Article;
 import jakarta.validation.constraints.*;
 import java.util.List;
@@ -9,6 +11,8 @@ import java.util.Set;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class ArticleUpdateRequest {
 
     @Size(min = 5, max = 100, message = "标题长度必须在5-100之间")

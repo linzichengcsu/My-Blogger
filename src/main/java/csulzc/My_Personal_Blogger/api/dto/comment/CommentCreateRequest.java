@@ -2,6 +2,8 @@ package csulzc.My_Personal_Blogger.api.dto.comment;
 
 import lombok.Data;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import jakarta.validation.constraints.*;
 
 /**
@@ -9,6 +11,8 @@ import jakarta.validation.constraints.*;
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class CommentCreateRequest {
 
     @NotBlank(message = "评论内容不能为空")

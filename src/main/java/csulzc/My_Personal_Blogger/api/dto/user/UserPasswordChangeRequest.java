@@ -4,12 +4,16 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 
 /**
  * 用户密码修改请求DTO
  */
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserPasswordChangeRequest {
 
     @NotBlank(message = "原密码不能为空")

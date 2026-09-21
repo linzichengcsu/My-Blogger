@@ -2,10 +2,14 @@ package csulzc.My_Personal_Blogger.api.dto.user;
 
 import lombok.Data;
 import lombok.Builder;
+import lombok.NoArgsConstructor;
+import lombok.AllArgsConstructor;
 import jakarta.validation.constraints.*;
 
 @Data
 @Builder
+@NoArgsConstructor
+@AllArgsConstructor
 public class UserUpdateRequest {
 
     @Size(max = 50, message = "显示名称不能超过50个字符")

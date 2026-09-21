@@ -170,6 +170,14 @@
 			<artifactId>spring-boot-starter-webmvc-test</artifactId>
 			<scope>test</scope>
 		</dependency>
+		<!-- Spring Boot 4 中 TestRestTemplate 位于 spring-boot-resttestclient 模块，
+			 但该模块不传递引入 spring-boot-restclient（RestTemplateBuilder 所在模块），
+			 需显式声明才能注入 TestRestTemplate（配合 @AutoConfigureTestRestTemplate）。 -->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-restclient</artifactId>
+			<scope>test</scope>
+		</dependency>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa-test</artifactId>

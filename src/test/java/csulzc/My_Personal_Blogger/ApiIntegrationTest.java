@@ -4,6 +4,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.resttestclient.autoconfigure.AutoConfigureTestRestTemplate;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.resttestclient.TestRestTemplate;
 import org.springframework.boot.test.web.server.LocalServerPort;
@@ -24,6 +25,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  *   <li>使用真实的安全过滤器链（JWT 鉴权），并通过随机端口启一个内嵌 Web 容器，
  *       通过 {@link TestRestTemplate} 以 HTTP 请求的方式调用接口，覆盖
  *       用户注册/登录/鉴权、管理员权限、分类/文章/评论 CRUD 等核心业务流程。</li>
+ *   <li>Spring Boot 4 起 {@code TestRestTemplate} 已迁移至 {@code spring-boot-resttestclient} 模块，
+ *       且不再随 {@code @SpringBootTest(RANDOM_PORT)} 自动注册，因此必须显式标注
+ *       {@link AutoConfigureTestRestTemplate} 才会创建该 Bean。</li>
  *   <li>使用 {@code test} Profile（H2 内存库），无需依赖本地 MySQL / Redis，
  *       可通过 Maven 一键运行：{@code mvn -Dtest=ApiIntegrationTest test}，便于接入 CI。</li>
  *   <li>测试方法按 {@link Order} 顺序执行并共享状态（token、生成资源的 id 等）。</li>
@@ -32,6 +36,7 @@ import static org.assertj.core.api.Assertions.assertThat;
  * <p>运行前提：JDK 23 + Maven（项目自身要求）。</p>
  */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
+@AutoConfigureTestRestTemplate
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @DisplayName("接口自动化集成测试")
