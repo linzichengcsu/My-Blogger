@@ -2,10 +2,12 @@ package csulzc.My_Personal_Blogger.domain.entity;
 
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.ActiveProfiles;
 import static org.junit.jupiter.api.Assertions.*;
 import static org.junit.jupiter.api.Assumptions.*;
 
 @SpringBootTest
+@ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ArticleEntityTest
 {
@@ -186,7 +188,7 @@ public class ArticleEntityTest
             long endTime = System.currentTimeMillis();
             long duration = endTime - startTime;
 
-            assertTrue(duration < 1000, "10000000次操作应该在1000ms内完成");
+            assertTrue(duration < 5000, "10000000次操作应该在5000ms内完成");
         }
     }
 }

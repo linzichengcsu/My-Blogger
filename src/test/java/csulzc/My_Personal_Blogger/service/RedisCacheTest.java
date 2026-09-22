@@ -33,12 +33,16 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.net.Socket;
 import java.util.List;
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assumptions.assumeTrue;
 
 /**
  * Redis 缓存集成测试
@@ -54,6 +58,16 @@ import static org.junit.jupiter.api.Assertions.assertNotNull;
 @DisplayName("Redis 缓存测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class RedisCacheTest {
+
+    // Redis 不可用时跳过整个测试类（CI 与无 Redis 环境不执行）
+    @BeforeAll
+    static void requireRedis() {
+        try (Socket socket = new Socket()) {
+            socket.connect(new InetSocketAddress("localhost", 6379), 500);
+        } catch (IOException e) {
+            assumeTrue(false, "Redis 未启动（localhost:6379 不可达），跳过 Redis 缓存集成测试");
+        }
+    }
 
     @Autowired
     private ArticleService articleService;

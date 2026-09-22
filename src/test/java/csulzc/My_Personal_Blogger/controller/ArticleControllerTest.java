@@ -28,7 +28,9 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.time.LocalDateTime;
@@ -41,6 +43,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(ArticleController.class)
+@ActiveProfiles("test")
 @DisplayName("ArticleController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Import({ArticleControllerTest.TestSecurityConfig.class, JwtTokenProvider.class})
@@ -50,6 +53,7 @@ class ArticleControllerTest {
 // ... existing code ...
 
     @TestConfiguration
+    @EnableWebSecurity
     static class TestSecurityConfig {
         @Bean
         @Primary

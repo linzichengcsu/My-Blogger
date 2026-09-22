@@ -24,7 +24,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -38,6 +40,7 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CommentController.class)
+@ActiveProfiles("test")
 @DisplayName("CommentController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Import({CommentControllerTest.TestSecurityConfig.class, SecurityContextUtil.class, JwtTokenProvider.class})
@@ -45,6 +48,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class CommentControllerTest {
 
     @TestConfiguration
+    @EnableWebSecurity
     static class TestSecurityConfig {
         @Bean
         @Primary

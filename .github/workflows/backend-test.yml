@@ -43,7 +43,8 @@ jobs:
 
       - name: Run tests
         shell: bash
-        run: ./mvnw -B -ntp test
+        # MySQLConnectionTest 需要真实 MySQL，仅在本地运行，CI 中排除
+        run: ./mvnw -B -ntp test "-Dtest=!MySQLConnectionTest"
 
       - name: Upload test reports
         if: always()

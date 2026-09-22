@@ -295,9 +295,7 @@ class ArticleRepositoryTest {
                 testArticle.getId(),
                 Article.ArticleStatus.RELEASE
         );
-        articleRepository.save(testArticle);
 
-        entityManager.merge(testArticle);
         entityManager.flush();
         entityManager.clear();
 

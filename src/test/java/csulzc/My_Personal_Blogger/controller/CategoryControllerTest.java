@@ -3,9 +3,12 @@ package csulzc.My_Personal_Blogger.controller;
 import tools.jackson.databind.ObjectMapper;
 import csulzc.My_Personal_Blogger.api.dto.category.*;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
+import csulzc.My_Personal_Blogger.config.JwtProperties;
+import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.service.CategoryService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
@@ -14,7 +17,9 @@ import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -28,12 +33,15 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(CategoryController.class)
+@ActiveProfiles("test")
 @DisplayName("CategoryController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Import(CategoryControllerTest.TestSecurityConfig.class)
+@Import({CategoryControllerTest.TestSecurityConfig.class, JwtTokenProvider.class})
+@EnableConfigurationProperties(JwtProperties.class)
 class CategoryControllerTest {
 
     @TestConfiguration
+    @EnableWebSecurity
     static class TestSecurityConfig {
         @Bean
         @Primary
@@ -106,7 +114,7 @@ class CategoryControllerTest {
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("分类创建成功"))
+                .andExpect(jsonPath("$.message").value("收藏夹创建成功"))
                 .andExpect(jsonPath("$.data.name").value("Java编程"))
                 .andExpect(jsonPath("$.data.description").value("Java相关技术文章"));
 
@@ -168,7 +176,7 @@ class CategoryControllerTest {
                         .content(objectMapper.writeValueAsString(updateRequest)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("分类更新成功"))
+                .andExpect(jsonPath("$.message").value("收藏夹更新成功"))
                 .andExpect(jsonPath("$.data.name").value("Java高级编程"));
 
         then(categoryService).should().updateCategory(eq(categoryId), any(CategoryRequest.class));
@@ -472,7 +480,7 @@ class CategoryControllerTest {
         mockMvc.perform(delete("/api/categories/{categoryId}", categoryId))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("分类删除成功"));
+                .andExpect(jsonPath("$.message").value("收藏夹删除成功"));
 
         then(categoryService).should().deleteCategory(eq(categoryId));
     }
@@ -497,7 +505,7 @@ class CategoryControllerTest {
                         .param("targetCategoryId", String.valueOf(targetCategoryId)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.message").value("分类删除成功，文章已转移"));
+                .andExpect(jsonPath("$.message").value("收藏夹删除成功，文章已转移"));
 
         then(categoryService).should().deleteCategoryAndTransferArticles(eq(categoryId), eq(targetCategoryId));
     }

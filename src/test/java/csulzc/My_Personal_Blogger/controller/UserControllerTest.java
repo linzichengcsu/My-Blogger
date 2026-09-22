@@ -17,9 +17,11 @@ import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Import;
 import org.springframework.context.annotation.Primary;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.http.MediaType;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -33,12 +35,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 @WebMvcTest(UserController.class)
+@ActiveProfiles("test")
 @DisplayName("UserController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 @Import({UserControllerTest.TestSecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, RequestSourceResolver.class})
 class UserControllerTest {
 
     @TestConfiguration
+    @EnableWebSecurity
     static class TestSecurityConfig {
         @Bean
         @Primary

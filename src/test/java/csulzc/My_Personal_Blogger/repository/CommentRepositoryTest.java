@@ -174,7 +174,7 @@ public class CommentRepositoryTest {
         entityManager.flush();
 
         // When - 分页查询（第1页，每页3条）
-        PageRequest pageable = PageRequest.of(0, 3, Sort.by("createdAt").descending());
+        PageRequest pageable = PageRequest.of(0, 3, Sort.by("id").descending());
         Page<Comment> page = commentRepository.findByCommenter(testCommenter, pageable);
 
         // Then
@@ -204,7 +204,7 @@ public class CommentRepositoryTest {
         }
         entityManager.flush();
 
-        PageRequest pageable = PageRequest.of(0, 3, Sort.by("createdAt").descending());
+        PageRequest pageable = PageRequest.of(0, 3, Sort.by("id").descending());
         Page<Comment> page = commentRepository.findByArticleAndParentCommentIsNull(testArticle, pageable);
 
         assertThat(page.getContent()).hasSize(3);
@@ -233,7 +233,7 @@ public class CommentRepositoryTest {
         }
         entityManager.flush();
 
-        PageRequest pageable = PageRequest.of(0, 3, Sort.by("createdAt").descending());
+        PageRequest pageable = PageRequest.of(0, 3, Sort.by("id").descending());
         Page<Comment> page = commentRepository.findByParentComment(testComment, pageable);
 
         assertThat(page.getContent()).hasSize(3);
