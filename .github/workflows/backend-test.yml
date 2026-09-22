@@ -37,6 +37,10 @@ jobs:
           java-version: "21"
           cache: maven
 
+      - name: Make Maven wrapper executable
+        shell: bash
+        run: chmod +x mvnw
+
       - name: Run tests
         shell: bash
         run: ./mvnw -B -ntp test
