@@ -1,0 +1,49 @@
+# 前端 CI：TypeScript 类型检查 + Vite 生产构建
+#
+# 说明：
+# - 前端使用 pnpm（见 frontend/pnpm-lock.yaml，lockfileVersion 9.0）。
+# - 项目暂未配置单元测试框架（如 Vitest），当前以 typecheck + build 作为验证；
+#   若后续接入 Vitest，可在 Build 步骤前追加 `pnpm test -- --run`。
+name: Frontend Tests
+
+on:
+  push:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-test.yml"
+  pull_request:
+    paths:
+      - "frontend/**"
+      - ".github/workflows/frontend-test.yml"
+
+jobs:
+  frontend-test:
+    name: Typecheck & Build (Node 22)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Set up Node 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: pnpm
+          cache-dependency-path: frontend/pnpm-lock.yaml
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Build
+        run: pnpm build

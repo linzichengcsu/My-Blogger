@@ -1,0 +1,51 @@
+# 后端 CI：运行 Spring Boot 单元测试与集成测试
+#
+# 说明：
+# - 测试使用 test Profile（H2 内存库，见 src/test/resources/application-test.properties），
+#   已禁用 Redis / Flyway，因此无需在 CI 中启动 MySQL / Redis 服务。
+# - Java 版本与 pom.xml 中 <java.version>21</java.version> 保持一致。
+name: Backend Tests
+
+on:
+  push:
+    paths:
+      - "src/**"
+      - "pom.xml"
+      - "mvnw"
+      - ".mvn/**"
+      - ".github/workflows/backend-test.yml"
+  pull_request:
+    paths:
+      - "src/**"
+      - "pom.xml"
+      - "mvnw"
+      - ".mvn/**"
+      - ".github/workflows/backend-test.yml"
+
+jobs:
+  backend-test:
+    name: Maven Test (JDK 21)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "21"
+          cache: maven
+
+      - name: Run tests
+        shell: bash
+        run: ./mvnw -B -ntp test
+
+      - name: Upload test reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: backend-test-reports
+          path: target/surefire-reports
+          retention-days: 7
+          if-no-files-found: ignore
