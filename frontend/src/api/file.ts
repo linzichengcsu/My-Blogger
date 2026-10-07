@@ -13,7 +13,11 @@ export function uploadFile(
   const formData = new FormData()
   formData.append('file', file)
   return http.post<FileUploadResponse>('/files/upload', formData, {
-    // 浏览器会自动附加 multipart boundary，不要手动设置 Content-Type
+    // 必须显式覆盖实例默认的 application/json：
+    // 否则 axios 的 transformRequest 会把 FormData 序列化成 JSON 发送，
+    // 导致后端报 "Current request is not a multipart request"。
+    // 这里指定 multipart 后，浏览器会自动附加 boundary。
+    headers: { 'Content-Type': 'multipart/form-data' },
     onUploadProgress: onProgress
       ? (event) => {
           if (event.total && event.total > 0) {

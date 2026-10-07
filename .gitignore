@@ -43,3 +43,4 @@ frontend/dist/
 .pnpm-store/
 frontend/.env.local
 frontend/.env.*.local
+/uploads/

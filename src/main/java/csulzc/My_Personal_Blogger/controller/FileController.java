@@ -45,8 +45,7 @@ public class FileController {
     }
 
     @GetMapping("/{fileName}")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "下载文件", description = "根据文件名下载或访问文件")
+    @Operation(summary = "下载文件", description = "根据文件名下载或访问文件（GET 匿名可访问，供 <img> 直接展示头像/封面；文件名不可枚举）")
     public ResponseEntity<Resource> downloadFile(
             @Parameter(description = "文件名") @PathVariable String fileName) {
         Resource resource = fileStorageService.loadFileAsResource(fileName);

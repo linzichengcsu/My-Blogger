@@ -197,7 +197,11 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
 export const service: AxiosInstance = axios.create({
   baseURL: API_BASE_URL,
   timeout: 15_000,
-  headers: { 'Content-Type': 'application/json' },
+  // 不要设置默认 Content-Type：
+  //  - JSON 对象请求会由 axios 的 transformRequest 自动设置 application/json；
+  //  - FormData 上传则需要原样传递，让浏览器自动附加 multipart/form-data 与 boundary。
+  // 若在这里写死 application/json，FormData 会被 transformRequest 序列化成 JSON，
+  // 后端将报 "Current request is not a multipart request"。
 })
 
 // 请求拦截：注入 Bearer token
