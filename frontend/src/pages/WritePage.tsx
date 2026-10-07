@@ -130,16 +130,20 @@ export default function WritePage() {
               <Input size="large" placeholder="请输入标题（5-100 字）" maxLength={100} showCount />
             </Form.Item>
 
-            <Form.Item name="content" rules={[
-              { required: true, message: '请输入正文' },
-              { validator: (_, v: string) => (v && v.trim().length >= 20 ? Promise.resolve() : Promise.reject(new Error('正文至少 20 个字符'))) },
-            ]}>
+            <Form.Item label="正文" required>
               <Tabs
                 items={[
                   {
                     key: 'edit',
                     label: '编辑（支持 Markdown）',
-                    children: <Input.TextArea rows={18} placeholder="开始写作，支持 Markdown 语法…" style={{ fontFamily: 'monospace' }} />,
+                    children: (
+                      <Form.Item name="content" noStyle rules={[
+                        { required: true, message: '请输入正文' },
+                        { validator: (_, v: string) => (v && v.trim().length >= 20 ? Promise.resolve() : Promise.reject(new Error('正文至少 20 个字符'))) },
+                      ]}>
+                        <Input.TextArea rows={18} placeholder="开始写作，支持 Markdown 语法…" style={{ fontFamily: 'monospace' }} />
+                      </Form.Item>
+                    ),
                   },
                   { key: 'preview', label: '预览', children: <MarkdownView content={content} /> },
                 ]}
