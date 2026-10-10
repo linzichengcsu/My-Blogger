@@ -49,6 +49,7 @@ import static org.junit.jupiter.api.Assumptions.assumeTrue;
  * <p>
  * 前置条件：本地 Docker 容器 blog-redis 已启动（docker exec blog-redis redis-cli ping 返回 PONG）
  * 覆盖场景：缓存写入、缓存命中（不查库）、缓存值反序列化、写操作驱逐缓存
+ * 目的：照顾大多数开发者在开发环境不部署Redis的习惯
  */
 @DataJpaTest
 @ActiveProfiles("test")

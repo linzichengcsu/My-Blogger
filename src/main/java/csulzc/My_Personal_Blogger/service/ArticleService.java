@@ -25,9 +25,13 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class ArticleService {
 
+    /** 批量 IN 子句的单批上限，避免超长 IN 子句导致性能退化或超限 */
+    private static final int BATCH_SIZE = 500;
+
     private final ArticleRepository articleRepository;
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
+    private final CommentRepository commentRepository;
     private final SecurityContextUtil securityContextUtil;
 
     /**
@@ -167,9 +171,9 @@ public class ArticleService {
      */
     @Cacheable(cacheNames = "article:detail", key = "#articleId")
     public ArticleDetailDTO getArticleById(Long articleId) {
-        Article article = articleRepository.findById(articleId)
+        Article article = articleRepository.findDetailById(articleId)
                 .orElseThrow(() -> new EntityNotFoundException("文章不存在"));
-        
+
         return convertToDetailDTO(article);
     }
 
@@ -178,19 +182,8 @@ public class ArticleService {
      */
     @Cacheable(cacheNames = "article:list", key = "#pageable")
     public PageResponseDTO<ArticleListItemDTO> getArticleList(Pageable pageable) {
-        Page<Article> articlePage = articleRepository.findAll(pageable);
-        
-        List<ArticleListItemDTO> content = articlePage.getContent().stream()
-                .map(this::convertToListItemDTO)
-                .collect(Collectors.toList());
-        
-        return PageResponseDTO.<ArticleListItemDTO>builder()
-                .content(content)
-                .totalElements(articlePage.getTotalElements())
-                .totalPages(articlePage.getTotalPages())
-                .page(articlePage.getNumber())
-                .size(articlePage.getSize())
-                .build();
+        Page<Article> articlePage = articleRepository.findAllWithAuthor(pageable);
+        return buildListResponse(articlePage);
     }
 
     /**
@@ -199,18 +192,7 @@ public class ArticleService {
     @Cacheable(cacheNames = "article:list", key = "#author.id + #pageable")
     public PageResponseDTO<ArticleListItemDTO> getArticlesByAuthor(User author, Pageable pageable) {
         Page<Article> articlePage = articleRepository.findByAuthor(author, pageable);
-        
-        List<ArticleListItemDTO> content = articlePage.getContent().stream()
-                .map(this::convertToListItemDTO)
-                .collect(Collectors.toList());
-        
-        return PageResponseDTO.<ArticleListItemDTO>builder()
-                .content(content)
-                .totalElements(articlePage.getTotalElements())
-                .totalPages(articlePage.getTotalPages())
-                .page(articlePage.getNumber())
-                .size(articlePage.getSize())
-                .build();
+        return buildListResponse(articlePage);
     }
 
     /**
@@ -218,22 +200,11 @@ public class ArticleService {
      */
     public PageResponseDTO<ArticleListItemDTO> searchArticles(String keyword, Pageable pageable) {
         Page<Article> articlePage = articleRepository.findByTitleContaining(keyword, pageable);
-        
-        List<ArticleListItemDTO> content = articlePage.getContent().stream()
-                .map(this::convertToListItemDTO)
-                .collect(Collectors.toList());
-        
-        return PageResponseDTO.<ArticleListItemDTO>builder()
-                .content(content)
-                .totalElements(articlePage.getTotalElements())
-                .totalPages(articlePage.getTotalPages())
-                .page(articlePage.getNumber())
-                .size(articlePage.getSize())
-                .build();
+        return buildListResponse(articlePage);
     }
 
     /**
-     * 删除文章
+     * 删除文章（先批量清理分类关联与评论，再删除文章本身，避免 JPA 级联逐条删除）
      */
     @CacheEvict(cacheNames = "article:detail", key = "#articleId")
     @Transactional(timeout = 30)
@@ -247,7 +218,12 @@ public class ArticleService {
         }
         securityContextUtil.validateOwnershipOrAdmin(author.getId(), "文章");
 
-        articleRepository.delete(article);
+        // 先删分类关联与评论（各一条批量 SQL），再删文章本身；
+        // 评论先删回复再删顶级，避免自引用外键约束冲突
+        articleRepository.deleteCategoryMappings(articleId);
+        commentRepository.deleteRepliesByArticle(article);
+        commentRepository.deleteTopLevelByArticle(article);
+        articleRepository.deleteByIdDirect(articleId);
     }
 
     @CacheEvict(cacheNames = "article:list", allEntries = true)
@@ -256,7 +232,15 @@ public class ArticleService {
         if (articleIds == null || articleIds.isEmpty()) {
             return 0;
         }
-        return articleRepository.batchDeleteByIds(articleIds);
+        int total = 0;
+        for (List<Long> batch : partition(articleIds, BATCH_SIZE)) {
+            // 先清理评论（先回复后顶级）与分类关联，避免外键约束失败
+            commentRepository.batchDeleteRepliesByArticleIds(batch);
+            commentRepository.batchDeleteTopLevelByArticleIds(batch);
+            articleRepository.batchDeleteCategoryMappings(batch);
+            total += articleRepository.batchDeleteByIds(batch);
+        }
+        return total;
     }
 
     @CacheEvict(cacheNames = "article:list", allEntries = true)
@@ -265,7 +249,11 @@ public class ArticleService {
         if (articleIds == null || articleIds.isEmpty()) {
             return 0;
         }
-        return articleRepository.batchUpdateStatus(articleIds, Article.ArticleStatus.RELEASE);
+        int total = 0;
+        for (List<Long> batch : partition(articleIds, BATCH_SIZE)) {
+            total += articleRepository.batchUpdateStatus(batch, Article.ArticleStatus.RELEASE);
+        }
+        return total;
     }
 
     @CacheEvict(cacheNames = "article:list", allEntries = true)
@@ -274,7 +262,22 @@ public class ArticleService {
         if (articleIds == null || articleIds.isEmpty()) {
             return 0;
         }
-        return articleRepository.batchUpdateStatus(articleIds, Article.ArticleStatus.ARCHIVE);
+        int total = 0;
+        for (List<Long> batch : partition(articleIds, BATCH_SIZE)) {
+            total += articleRepository.batchUpdateStatus(batch, Article.ArticleStatus.ARCHIVE);
+        }
+        return total;
+    }
+
+    /**
+     * 将大列表切分为指定大小的批次（避免超长 IN 子句）
+     */
+    private List<List<Long>> partition(List<Long> ids, int size) {
+        List<List<Long>> parts = new ArrayList<>();
+        for (int i = 0; i < ids.size(); i += size) {
+            parts.add(new ArrayList<>(ids.subList(i, Math.min(i + size, ids.size()))));
+        }
+        return parts;
     }
 
     @CacheEvict(cacheNames = "article:detail", key = "#articleId")
@@ -318,7 +321,7 @@ public class ArticleService {
                 .status(article.getStatus())
                 .likeCount(article.getLikeCount())
                 .favoriteCount(article.getFavoriteCount())
-                .commentCount(article.getComments().size())
+                .commentCount((int) commentRepository.countByArticle(article))
                 .author(convertToUserProfileDTO(article.getAuthor()))
                 .categories(convertToCategoryDTOs(article.getCategories()))
                 .build();
@@ -349,9 +352,61 @@ public class ArticleService {
                 .build();
     }
     /**
-     * 转换为 ArticleListItemDTO
+     * 组装分页文章列表：批量预加载评论数与分类映射，避免逐篇懒加载（N+1）
      */
-    private ArticleListItemDTO convertToListItemDTO(Article article) {
+    private PageResponseDTO<ArticleListItemDTO> buildListResponse(Page<Article> articlePage) {
+        List<Article> articles = articlePage.getContent();
+        List<Long> articleIds = articles.stream().map(Article::getId).collect(Collectors.toList());
+
+        Map<Long, Long> commentCounts = loadCommentCounts(articleIds);
+        Map<Long, Set<Category>> categoryMap = loadCategoryMappings(articleIds);
+
+        List<ArticleListItemDTO> content = articles.stream()
+                .map(article -> convertToListItemDTO(
+                        article,
+                        commentCounts.getOrDefault(article.getId(), 0L),
+                        categoryMap.getOrDefault(article.getId(), Set.of())))
+                .collect(Collectors.toList());
+
+        return PageResponseDTO.<ArticleListItemDTO>builder()
+                .content(content)
+                .totalElements(articlePage.getTotalElements())
+                .totalPages(articlePage.getTotalPages())
+                .page(articlePage.getNumber())
+                .size(articlePage.getSize())
+                .build();
+    }
+
+    /**
+     * 批量查询评论数：articleId -> count（一条 SQL 替代逐篇懒加载评论集合）
+     */
+    private Map<Long, Long> loadCommentCounts(List<Long> articleIds) {
+        if (articleIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        return commentRepository.countByArticleIds(articleIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
+
+    /**
+     * 批量查询文章分类映射：articleId -> Set<Category>（一条 SQL 替代逐篇懒加载分类集合）
+     */
+    private Map<Long, Set<Category>> loadCategoryMappings(List<Long> articleIds) {
+        if (articleIds.isEmpty()) {
+            return new HashMap<>();
+        }
+        Map<Long, Set<Category>> categoryMap = new HashMap<>();
+        for (Object[] row : articleRepository.findCategoryMappingByArticleIds(articleIds)) {
+            Long articleId = (Long) row[0];
+            categoryMap.computeIfAbsent(articleId, k -> new HashSet<>()).add((Category) row[1]);
+        }
+        return categoryMap;
+    }
+
+    /**
+     * 转换为 ArticleListItemDTO（列表场景：评论数与分类由批量查询预加载，不再访问懒加载集合）
+     */
+    private ArticleListItemDTO convertToListItemDTO(Article article, long commentCount, Set<Category> categories) {
         return ArticleListItemDTO.builder()
                 .id(article.getId())
                 .title(article.getTitle())
@@ -359,9 +414,9 @@ public class ArticleService {
                 .coverImage(article.getCoverImage())
                 .createdAt(article.getCreatedAt())
                 .likeCount(article.getLikeCount())
-                .commentCount(article.getComments().size())
+                .commentCount((int) commentCount)
                 .author(convertToUserProfileDTO(article.getAuthor()))
-                .categories(convertToCategoryDTOs(article.getCategories()))
+                .categories(convertToCategoryDTOs(categories))
                 .build();
     }
 

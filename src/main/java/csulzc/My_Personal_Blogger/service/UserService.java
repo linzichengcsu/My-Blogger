@@ -2,7 +2,6 @@ package csulzc.My_Personal_Blogger.service;
 
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.api.dto.user.*;
-import csulzc.My_Personal_Blogger.domain.entity.Article;
 import csulzc.My_Personal_Blogger.domain.entity.User;
 import csulzc.My_Personal_Blogger.repository.ArticleRepository;
 import csulzc.My_Personal_Blogger.repository.CommentRepository;
@@ -23,6 +22,7 @@ import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -297,12 +297,10 @@ public class UserService {
     }
 
     /**
-     * 计算用户获得的总点赞数
+     * 计算用户获得的总点赞数（SQL 聚合，避免加载该用户全部文章实体）
      */
     private long calculateTotalLikes(User user) {
-        return user.getArticles().stream()
-                .mapToLong(Article::getLikeCount)
-                .sum();
+        return articleRepository.sumLikeCountByAuthor(user);
     }
 
     /**
@@ -415,8 +413,10 @@ public class UserService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<User> userPage = userRepository.findAll(pageable);
 
+        Map<Long, Long> articleCounts = loadArticleCounts(userPage.getContent());
+
         List<UserProfileDTO> dtos = userPage.getContent().stream()
-                .map(this::convertToProfileDTO)
+                .map(user -> convertToProfileDTO(user, articleCounts))
                 .collect(Collectors.toList());
 
         return PageResponseDTO.<UserProfileDTO>builder()
@@ -431,43 +431,40 @@ public class UserService {
     }
 
     /**
-     * 根据状态查询用户
+     * 根据状态查询用户（数据库过滤，避免全表加载后在内存过滤）
      */
     public List<UserDetailDTO> getUsersByStatus(User.UserStatus status) {
-        return userRepository.findAll().stream()
-                .filter(u -> u.getStatus() == status)
-                .map(this::convertToDetailDTO)
+        List<User> users = userRepository.findByStatus(status);
+
+        Map<Long, Long> articleCounts = loadArticleCounts(users);
+        Map<Long, Long> commentCounts = loadCommentCounts(users);
+
+        return users.stream()
+                .map(user -> convertToDetailDTO(user, articleCounts, commentCounts))
                 .collect(Collectors.toList());
     }
 
     /**
-     * 搜索用户（根据用户名或显示名称）
+     * 搜索用户（根据用户名或显示名称，数据库模糊查询 + 数据库分页）
      */
     public PageResponseDTO<UserProfileDTO> searchUsers(String keyword, int page, int size) {
         Pageable pageable = PageRequest.of(page, size);
+        Page<User> userPage = userRepository.findByUsernameContainingOrDisplayNameContaining(keyword, keyword, pageable);
 
-        List<User> users = userRepository.findAll().stream()
-                .filter(u -> u.getUsername().contains(keyword) ||
-                        (u.getDisplayName() != null && u.getDisplayName().contains(keyword)))
-                .toList();
+        Map<Long, Long> articleCounts = loadArticleCounts(userPage.getContent());
 
-        int start = page * size;
-        int end = Math.min(start + size, users.size());
-
-        List<UserProfileDTO> dtos = users.stream()
-                .skip(start)
-                .limit(size)
-                .map(this::convertToProfileDTO)
+        List<UserProfileDTO> dtos = userPage.getContent().stream()
+                .map(user -> convertToProfileDTO(user, articleCounts))
                 .collect(Collectors.toList());
 
         return PageResponseDTO.<UserProfileDTO>builder()
                 .content(dtos)
-                .page(page)
-                .size(size)
-                .totalElements((long) users.size())
-                .totalPages((int) Math.ceil((double) users.size() / size))
-                .first(page == 0)
-                .last(end >= users.size())
+                .page(userPage.getNumber())
+                .size(userPage.getSize())
+                .totalElements(userPage.getTotalElements())
+                .totalPages(userPage.getTotalPages())
+                .first(userPage.isFirst())
+                .last(userPage.isLast())
                 .build();
     }
 
@@ -507,34 +504,50 @@ public class UserService {
     public List<UserActivityDTO> getRecentlyActiveUsers(int limit) {
         Pageable pageable = PageRequest.of(0, limit, Sort.by("lastLoginAt").descending());
         Page<User> userPage = userRepository.findAll(pageable);
+        List<User> users = userPage.getContent();
 
-        return userPage.getContent().stream()
-                .map(user -> {
-                    long articleCount = articleRepository.countByAuthor(user);
-                    long commentCount = commentRepository.countByCommenter(user);
+        // 批量预加载文章数、评论数与获赞总数，避免逐个用户查询（N+1）
+        Map<Long, Long> articleCounts = loadArticleCounts(users);
+        Map<Long, Long> commentCounts = loadCommentCounts(users);
+        Map<Long, Long> likeCounts = loadLikeCounts(users);
 
-                    return UserActivityDTO.builder()
-                            .userId(user.getId())
-                            .username(user.getUsername())
-                            .displayName(user.getDisplayName())
-                            .articleCount(articleCount)
-                            .commentCount(commentCount)
-                            .likeReceived(calculateTotalLikes(user))
-                            .lastActiveAt(user.getLastLoginAt() != null ? user.getLastLoginAt() : user.getUpdatedAt())
-                            .build();
-                })
+        return users.stream()
+                .map(user -> UserActivityDTO.builder()
+                        .userId(user.getId())
+                        .username(user.getUsername())
+                        .displayName(user.getDisplayName())
+                        .articleCount(articleCounts.getOrDefault(user.getId(), 0L))
+                        .commentCount(commentCounts.getOrDefault(user.getId(), 0L))
+                        .likeReceived(likeCounts.getOrDefault(user.getId(), 0L))
+                        .lastActiveAt(user.getLastLoginAt() != null ? user.getLastLoginAt() : user.getUpdatedAt())
+                        .build())
                 .collect(Collectors.toList());
     }
 
     // ==================== 辅助方法 ====================
 
     /**
-     * 转换为用户详情 DTO
+     * 转换为用户详情 DTO（单用户场景：固定 2 次 count 查询）
      */
     private UserDetailDTO convertToDetailDTO(User user) {
-        long articleCount = articleRepository.countByAuthor(user);
-        long commentCount = commentRepository.countByCommenter(user);
+        return buildDetailDTO(user,
+                articleRepository.countByAuthor(user),
+                commentRepository.countByCommenter(user));
+    }
 
+    /**
+     * 转换为用户详情 DTO（列表场景：文章数/评论数由批量查询预加载）
+     */
+    private UserDetailDTO convertToDetailDTO(User user, Map<Long, Long> articleCounts, Map<Long, Long> commentCounts) {
+        return buildDetailDTO(user,
+                articleCounts.getOrDefault(user.getId(), 0L),
+                commentCounts.getOrDefault(user.getId(), 0L));
+    }
+
+    /**
+     * 构建用户详情 DTO
+     */
+    private UserDetailDTO buildDetailDTO(User user, long articleCount, long commentCount) {
         return UserDetailDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -554,11 +567,23 @@ public class UserService {
     }
 
     /**
-     * 转换为用户资料 DTO
+     * 转换为用户资料 DTO（单用户场景：固定 1 次 count 查询）
      */
     private UserProfileDTO convertToProfileDTO(User user) {
-        long articleCount = articleRepository.countByAuthor(user);
+        return buildProfileDTO(user, articleRepository.countByAuthor(user));
+    }
 
+    /**
+     * 转换为用户资料 DTO（列表场景：文章数由批量查询预加载）
+     */
+    private UserProfileDTO convertToProfileDTO(User user, Map<Long, Long> articleCounts) {
+        return buildProfileDTO(user, articleCounts.getOrDefault(user.getId(), 0L));
+    }
+
+    /**
+     * 构建用户资料 DTO
+     */
+    private UserProfileDTO buildProfileDTO(User user, long articleCount) {
         return UserProfileDTO.builder()
                 .id(user.getId())
                 .username(user.getUsername())
@@ -569,6 +594,42 @@ public class UserService {
                 .articleCount(articleCount)
                 .followerCount(0L) // 可根据需求扩展
                 .build();
+    }
+
+    /**
+     * 批量查询文章数：userId -> count（一条 SQL 替代逐个 countByAuthor）
+     */
+    private Map<Long, Long> loadArticleCounts(List<User> users) {
+        List<Long> userIds = users.stream().map(User::getId).toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return articleRepository.countByAuthorIds(userIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
+
+    /**
+     * 批量查询评论数：userId -> count（一条 SQL 替代逐个 countByCommenter）
+     */
+    private Map<Long, Long> loadCommentCounts(List<User> users) {
+        List<Long> userIds = users.stream().map(User::getId).toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return commentRepository.countByCommenterIds(userIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
+
+    /**
+     * 批量查询获赞总数：userId -> sum(likeCount)（一条 SQL 替代逐个加载全部文章实体）
+     */
+    private Map<Long, Long> loadLikeCounts(List<User> users) {
+        List<Long> userIds = users.stream().map(User::getId).toList();
+        if (userIds.isEmpty()) {
+            return Map.of();
+        }
+        return articleRepository.sumLikeCountByAuthorIds(userIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
     }
 
     /**

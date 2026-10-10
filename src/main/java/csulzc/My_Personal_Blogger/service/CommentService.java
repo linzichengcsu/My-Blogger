@@ -23,12 +23,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
 public class CommentService {
+
+    /** 批量 IN 子句的单批上限，避免超长 IN 子句导致性能退化或超限 */
+    private static final int BATCH_SIZE = 500;
 
     private final CommentRepository commentRepository;
     private final ArticleRepository articleRepository;
@@ -88,60 +92,58 @@ public class CommentService {
     }
 
     /**
-     * 批量删除文章的所有评论
+     * 批量删除文章的所有评论（先删回复再删顶级评论，两条批量 SQL 替代全量加载后逐条删除）
      */
     @Transactional(timeout = 60)
     public int deleteCommentsByArticle(Long articleId) {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new EntityNotFoundException("文章不存在"));
 
-        // 先查询所有评论
-        List<Comment> allComments = commentRepository.findByArticle(article);
-
-        // 先删除所有回复评论（有父评论的）
-        List<Comment> replyComments = allComments.stream()
-                .filter(c -> c.getParentComment() != null)
-                .collect(Collectors.toList());
-
-        for (Comment reply : replyComments) {
-            Comment parent = reply.getParentComment();
-            if (parent != null) {
-                parent.getReplies().remove(reply);
-            }
-        }
-
-        commentRepository.deleteAll(replyComments);
-
-        // 再删除顶级评论
-        List<Comment> topLevelComments = allComments.stream()
-                .filter(c -> c.getParentComment() == null)
-                .collect(Collectors.toList());
-
-        commentRepository.deleteAll(topLevelComments);
-
-        return allComments.size();
+        // 先删回复（parent_comment_id 非空），再删顶级评论，避免自引用外键约束冲突
+        int deleted = commentRepository.deleteRepliesByArticle(article);
+        deleted += commentRepository.deleteTopLevelByArticle(article);
+        return deleted;
     }
 
     /**
-     * 批量删除指定 ID 的评论
+     * 批量删除指定 ID 的评论（大列表按批执行，避免超长 IN 子句）
      */
     @Transactional(timeout = 60)
     public int batchDeleteComments(List<Long> commentIds) {
         if (commentIds == null || commentIds.isEmpty()) {
             return 0;
         }
-        return commentRepository.batchDeleteByIds(commentIds);
+        int total = 0;
+        for (List<Long> batch : partition(commentIds, BATCH_SIZE)) {
+            total += commentRepository.batchDeleteByIds(batch);
+        }
+        return total;
     }
 
     /**
-     * 批量审核评论
+     * 批量审核评论（大列表按批执行，避免超长 IN 子句）
      */
     @Transactional(timeout = 60)
     public int batchApproveComments(List<Long> commentIds, boolean approved) {
         if (commentIds == null || commentIds.isEmpty()) {
             return 0;
         }
-        return commentRepository.batchUpdateApprovalStatus(commentIds, approved);
+        int total = 0;
+        for (List<Long> batch : partition(commentIds, BATCH_SIZE)) {
+            total += commentRepository.batchUpdateApprovalStatus(batch, approved);
+        }
+        return total;
+    }
+
+    /**
+     * 将大列表切分为指定大小的批次
+     */
+    private List<List<Long>> partition(List<Long> ids, int size) {
+        List<List<Long>> parts = new ArrayList<>();
+        for (int i = 0; i < ids.size(); i += size) {
+            parts.add(new ArrayList<>(ids.subList(i, Math.min(i + size, ids.size()))));
+        }
+        return parts;
     }
 
     // ==================== 评论查询 ====================
@@ -165,8 +167,17 @@ public class CommentService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<Comment> commentPage = commentRepository.findByArticleAndParentCommentIsNull(article, pageable);
 
+        // 批量预加载所有顶级评论的回复数与回复预览，避免逐条懒加载（N+1）
+        List<Long> parentIds = commentPage.getContent().stream()
+                .map(Comment::getId)
+                .collect(Collectors.toList());
+        Map<Long, Long> replyCounts = loadReplyCounts(parentIds);
+        Map<Long, List<Comment>> repliesByParent = loadRepliesByParent(parentIds);
+
         List<CommentDTO> content = commentPage.getContent().stream()
-                .map(this::convertToDTO)
+                .map(comment -> convertToDTO(comment,
+                        replyCounts.getOrDefault(comment.getId(), 0L),
+                        repliesByParent.getOrDefault(comment.getId(), List.of())))
                 .collect(Collectors.toList());
 
         return PageResponseDTO.<CommentDTO>builder()
@@ -215,8 +226,17 @@ public class CommentService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<Comment> commentPage = commentRepository.findByCommenter(user, pageable);
 
+        // 批量预加载所有评论的回复数与回复预览，避免逐条懒加载（N+1）
+        List<Long> parentIds = commentPage.getContent().stream()
+                .map(Comment::getId)
+                .collect(Collectors.toList());
+        Map<Long, Long> replyCounts = loadReplyCounts(parentIds);
+        Map<Long, List<Comment>> repliesByParent = loadRepliesByParent(parentIds);
+
         List<CommentDTO> content = commentPage.getContent().stream()
-                .map(this::convertToDTO)
+                .map(comment -> convertToDTO(comment,
+                        replyCounts.getOrDefault(comment.getId(), 0L),
+                        repliesByParent.getOrDefault(comment.getId(), List.of())))
                 .collect(Collectors.toList());
 
         return PageResponseDTO.<CommentDTO>builder()
@@ -253,9 +273,17 @@ public class CommentService {
     // ==================== 辅助方法 ====================
 
     /**
-     * 转换为 CommentDTO
+     * 转换为 CommentDTO（单篇场景：评论数与回复直接访问懒加载集合，固定少量查询，非 N+1）
      */
     private CommentDTO convertToDTO(Comment comment) {
+        List<Comment> replies = comment.getReplies();
+        return convertToDTO(comment, replies.size(), replies);
+    }
+
+    /**
+     * 转换为 CommentDTO（列表场景：回复数与回复预览由批量查询预加载，不再访问懒加载集合）
+     */
+    private CommentDTO convertToDTO(Comment comment, long replyCount, List<Comment> replies) {
         UserProfileDTO commenterDTO = UserProfileDTO.builder()
                 .id(comment.getCommenter().getId())
                 .username(comment.getCommenter().getUsername())
@@ -271,15 +299,15 @@ public class CommentService {
                 .commenter(commenterDTO)
                 .articleId(comment.getArticle().getId())
                 .parentCommentId(comment.getParentComment() != null ? comment.getParentComment().getId() : null)
-                .replyCount(comment.getReplies().size())
+                .replyCount((int) replyCount)
                 .likeCount(comment.getLikeCount())
                 .isLiked(false)  // TODO: 需要根据当前用户判断是否点赞
                 .createdAt(comment.getCreatedAt())
                 .build();
 
         // 设置回复列表（只转换第一层回复）
-        if (!comment.getReplies().isEmpty()) {
-            List<CommentReplyDTO> replyDTOs = comment.getReplies().stream()
+        if (replies != null && !replies.isEmpty()) {
+            List<CommentReplyDTO> replyDTOs = replies.stream()
                     .limit(5)  // 限制回复显示数量
                     .map(reply -> convertToReplyDTO(reply, comment))
                     .collect(Collectors.toList());
@@ -287,6 +315,29 @@ public class CommentService {
         }
 
         return dto;
+    }
+
+    /**
+     * 批量查询回复数：parentCommentId -> count（一条 SQL 替代逐条懒加载回复集合）
+     */
+    private Map<Long, Long> loadReplyCounts(List<Long> parentIds) {
+        if (parentIds.isEmpty()) {
+            return Map.of();
+        }
+        return commentRepository.countRepliesByParentIds(parentIds).stream()
+                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    }
+
+    /**
+     * 批量查询回复并按父评论分组：parentCommentId -> List<Comment>
+     * （一条 SQL 替代逐条懒加载回复集合；回复已预加载评论者与被回复人）
+     */
+    private Map<Long, List<Comment>> loadRepliesByParent(List<Long> parentIds) {
+        if (parentIds.isEmpty()) {
+            return Map.of();
+        }
+        return commentRepository.findRepliesByParentIds(parentIds).stream()
+                .collect(Collectors.groupingBy(reply -> reply.getParentComment().getId()));
     }
 
     /**

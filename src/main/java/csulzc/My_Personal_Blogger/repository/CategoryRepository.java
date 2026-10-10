@@ -18,6 +18,9 @@ public interface CategoryRepository extends BaseRepository<Category, Long> {
     // 2. 查询顶级收藏夹（没有父收藏夹）
     List<Category> findByParentCategoryIsNull();
 
+    // 2.1 统计顶级收藏夹数量（避免加载全部顶级收藏夹再 size()）
+    long countByParentCategoryIsNull();
+
     // 3. 查询某个收藏夹的所有子收藏夹
     List<Category> findByParentCategory(Category parent);
 
@@ -28,4 +31,15 @@ public interface CategoryRepository extends BaseRepository<Category, Long> {
     // 5. 查询某篇文章的所有收藏夹
     @Query("SELECT c FROM Category c JOIN c.articles a WHERE a = :article")
     List<Category> findByArticle(@Param("article") Article article);
+
+    // ==================== 全表加载优化新增方法 ====================
+
+    // 按名称或描述模糊搜索（忽略大小写），避免 findAll 后在内存过滤
+    @Query("SELECT c FROM Category c WHERE LOWER(c.name) LIKE LOWER(CONCAT('%', :keyword, '%')) " +
+            "OR (c.description IS NOT NULL AND LOWER(c.description) LIKE LOWER(CONCAT('%', :keyword, '%')))")
+    List<Category> searchByNameOrDescription(@Param("keyword") String keyword);
+
+    // 查询有文章的分类（JOIN 去重），避免 findAll 后在内存判断文章集合
+    @Query("SELECT DISTINCT c FROM Category c JOIN c.articles a")
+    List<Category> findWithArticles();
 }

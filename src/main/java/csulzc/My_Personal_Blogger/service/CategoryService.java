@@ -19,6 +19,7 @@ import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -27,6 +28,38 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+
+    /**
+     * 分类查询上下文：一次加载全量分类、文章数聚合与父子关系映射，
+     * 供各查询方法在内存中组装 DTO，避免逐分类懒加载（N+1）。
+     */
+    private record CategoryContext(
+            Map<Long, Long> articleCounts,      // categoryId -> 文章数（含 0）
+            Map<Long, Category> categoriesById, // categoryId -> 分类实体
+            Map<Long, List<Category>> childrenMap) { // parentCategoryId -> 直接子分类列表
+    }
+
+    /**
+     * 加载分类查询上下文（固定 2 条 SQL：分类全量 + 文章数聚合）
+     */
+    private CategoryContext loadContext() {
+        Map<Long, Long> articleCounts = categoryRepository.findAllWithArticleCount().stream()
+                .collect(Collectors.toMap(
+                        obj -> ((Category) obj[0]).getId(),
+                        obj -> ((Number) obj[1]).longValue(),
+                        (a, b) -> a));
+
+        List<Category> all = categoryRepository.findAll();
+
+        Map<Long, Category> categoriesById = all.stream()
+                .collect(Collectors.toMap(Category::getId, c -> c));
+
+        Map<Long, List<Category>> childrenMap = all.stream()
+                .filter(c -> c.getParentCategory() != null)
+                .collect(Collectors.groupingBy(c -> c.getParentCategory().getId()));
+
+        return new CategoryContext(articleCounts, categoriesById, childrenMap);
+    }
 
     // ==================== 收藏夹创建与更新 ====================
 
@@ -58,7 +91,7 @@ public class CategoryService {
         Category category = categoryBuilder.build();
         Category savedCategory = categoryRepository.save(category);
 
-        return convertToDTO(savedCategory);
+        return convertToDTO(savedCategory, loadContext());
     }
 
     /**
@@ -81,17 +114,21 @@ public class CategoryService {
         category.setName(request.getName());
         category.setDescription(request.getDescription());
 
+        CategoryContext ctx = loadContext();
+
         // 更新父收藏夹
         if (request.getParentCategoryId() != null) {
             if (request.getParentCategoryId().equals(categoryId)) {
                 throw new IllegalArgumentException("不能将自己设置为父收藏夹");
             }
 
-            Category parentCategory = categoryRepository.findById(request.getParentCategoryId())
-                    .orElseThrow(() -> new EntityNotFoundException("父收藏夹不存在"));
+            Category parentCategory = ctx.categoriesById().get(request.getParentCategoryId());
+            if (parentCategory == null) {
+                throw new EntityNotFoundException("父收藏夹不存在");
+            }
 
-            // 检查是否会形成循环引用
-            if (isChildCategory(parentCategory, category)) {
+            // 检查是否会形成循环引用（纯内存遍历，不再逐层懒加载）
+            if (isChildCategory(parentCategory, category, ctx.categoriesById())) {
                 throw new IllegalArgumentException("不能将子收藏夹设置为父收藏夹，会形成循环引用");
             }
 
@@ -101,7 +138,7 @@ public class CategoryService {
         }
 
         Category updatedCategory = categoryRepository.save(category);
-        return convertToDTO(updatedCategory);
+        return convertToDTO(updatedCategory, ctx);
     }
 
     // ==================== 收藏夹查询 ====================
@@ -111,9 +148,12 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:detail", key = "#categoryId")
     public CategoryDTO getCategoryById(Long categoryId) {
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
-        return convertToDTO(category);
+        CategoryContext ctx = loadContext();
+        Category category = ctx.categoriesById().get(categoryId);
+        if (category == null) {
+            throw new EntityNotFoundException("收藏夹不存在");
+        }
+        return convertToDTO(category, ctx);
     }
 
     /**
@@ -123,7 +163,7 @@ public class CategoryService {
     public CategoryDTO getCategoryByName(String name) {
         Category category = categoryRepository.findByName(name)
                 .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
-        return convertToDTO(category);
+        return convertToDTO(category, loadContext());
     }
 
     /**
@@ -131,9 +171,10 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getAllTopLevelCategories() {
-        List<Category> categories = categoryRepository.findByParentCategoryIsNull();
-        return categories.stream()
-                .map(this::convertToDTO)
+        CategoryContext ctx = loadContext();
+        return ctx.categoriesById().values().stream()
+                .filter(c -> c.getParentCategory() == null)
+                .map(c -> convertToDTO(c, ctx))
                 .collect(Collectors.toList());
     }
 
@@ -142,11 +183,12 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getSubCategories(Long parentCategoryId) {
-        Category parent = categoryRepository.findById(parentCategoryId)
-                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
-
-        return categoryRepository.findByParentCategory(parent).stream()
-                .map(this::convertToDTO)
+        CategoryContext ctx = loadContext();
+        if (!ctx.categoriesById().containsKey(parentCategoryId)) {
+            throw new EntityNotFoundException("收藏夹不存在");
+        }
+        return ctx.childrenMap().getOrDefault(parentCategoryId, List.of()).stream()
+                .map(c -> convertToDTO(c, ctx))
                 .collect(Collectors.toList());
     }
 
@@ -158,8 +200,10 @@ public class CategoryService {
         Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
         Page<Category> categoryPage = categoryRepository.findAll(pageable);
 
+        CategoryContext ctx = loadContext();
+
         List<CategoryDTO> content = categoryPage.getContent().stream()
-                .map(this::convertToDTO)
+                .map(c -> convertToDTO(c, ctx))
                 .collect(Collectors.toList());
 
         return PageResponseDTO.<CategoryDTO>builder()
@@ -180,39 +224,34 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:tree")
     public List<CategoryTreeDTO> buildCategoryTree() {
-        List<Category> allCategories = categoryRepository.findAll();
+        CategoryContext ctx = loadContext();
 
         // 找到所有顶级收藏夹
-        List<Category> topCategories = allCategories.stream()
+        List<Category> topCategories = ctx.categoriesById().values().stream()
                 .filter(c -> c.getParentCategory() == null)
                 .collect(Collectors.toList());
 
-        // 递归构建树形结构
+        // 递归构建树形结构（子分类关系取自预加载的 childrenMap，不再逐层懒加载）
         return topCategories.stream()
-                .map(c -> buildCategoryTreeNode(c, allCategories))
+                .map(c -> buildCategoryTreeNode(c, ctx))
                 .collect(Collectors.toList());
     }
 
     /**
      * 递归构建收藏夹树节点
      */
-    private CategoryTreeDTO buildCategoryTreeNode(Category category, List<Category> allCategories) {
+    private CategoryTreeDTO buildCategoryTreeNode(Category category, CategoryContext ctx) {
         CategoryTreeDTO node = CategoryTreeDTO.builder()
                 .id(category.getId())
                 .name(category.getName())
                 .description(category.getDescription())
-                .articleCount(countArticlesInCategory(category))
+                .articleCount(ctx.articleCounts().getOrDefault(category.getId(), 0L).intValue())
                 .children(new ArrayList<>())
                 .build();
 
-        // 查找直接子收藏夹
-        List<Category> directChildren = allCategories.stream()
-                .filter(c -> category.equals(c.getParentCategory()))
-                .collect(Collectors.toList());
-
-        // 递归构建子节点
-        List<CategoryTreeDTO> children = directChildren.stream()
-                .map(child -> buildCategoryTreeNode(child, allCategories))
+        // 查找直接子收藏夹（内存映射，无查询）
+        List<CategoryTreeDTO> children = ctx.childrenMap().getOrDefault(category.getId(), List.of()).stream()
+                .map(child -> buildCategoryTreeNode(child, ctx))
                 .collect(Collectors.toList());
 
         node.setChildren(children);
@@ -224,15 +263,20 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getCategoryPath(Long categoryId) {
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
+        CategoryContext ctx = loadContext();
+        if (!ctx.categoriesById().containsKey(categoryId)) {
+            throw new EntityNotFoundException("收藏夹不存在");
+        }
 
         List<CategoryDTO> path = new ArrayList<>();
-        Category current = category;
-
-        while (current != null) {
-            path.add(0, convertToDTO(current));
-            current = current.getParentCategory();
+        Long currentId = categoryId;
+        while (currentId != null) {
+            Category current = ctx.categoriesById().get(currentId);
+            if (current == null) {
+                break;
+            }
+            path.add(0, convertToDTO(current, ctx));
+            currentId = current.getParentCategory() != null ? current.getParentCategory().getId() : null;
         }
 
         return path;
@@ -267,33 +311,25 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:list")
     public long countArticlesInCategoryIncludingSubCategories(Long categoryId) {
-        Category category = categoryRepository.findById(categoryId)
-                .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
-
-        return countArticlesRecursive(category);
+        CategoryContext ctx = loadContext();
+        Category category = ctx.categoriesById().get(categoryId);
+        if (category == null) {
+            throw new EntityNotFoundException("收藏夹不存在");
+        }
+        return countArticlesRecursive(category, ctx);
     }
 
     /**
-     * 递归计算收藏夹及其子收藏夹的文章总数
+     * 递归计算收藏夹及其子收藏夹的文章总数（基于预加载的文章数映射，无查询）
      */
-    private long countArticlesRecursive(Category category) {
-        long count = category.getArticles().size();
+    private long countArticlesRecursive(Category category, CategoryContext ctx) {
+        long count = ctx.articleCounts().getOrDefault(category.getId(), 0L);
 
-        if (category.getSubCategories() != null) {
-            for (Category subCategory : category.getSubCategories()) {
-                count += countArticlesRecursive(subCategory);
-            }
+        for (Category subCategory : ctx.childrenMap().getOrDefault(category.getId(), List.of())) {
+            count += countArticlesRecursive(subCategory, ctx);
         }
 
-
         return count;
-    }
-
-    /**
-     * 计算收藏夹的文章数量（不包含子收藏夹）
-     */
-    private int countArticlesInCategory(Category category) {
-        return category.getArticles() != null ? category.getArticles().size() : 0;
     }
 
     /**
@@ -402,7 +438,7 @@ public class CategoryService {
     // ==================== 收藏夹搜索 ====================
 
     /**
-     * 搜索收藏夹（根据名称或描述）
+     * 搜索收藏夹（根据名称或描述，数据库模糊查询，避免全表加载后在内存过滤）
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> searchCategories(String keyword) {
@@ -410,68 +446,73 @@ public class CategoryService {
             return new ArrayList<>();
         }
 
-        String lowerCaseKeyword = keyword.toLowerCase();
-
-        return categoryRepository.findAll().stream()
-                .filter(c -> c.getName().toLowerCase().contains(lowerCaseKeyword) ||
-                        (c.getDescription() != null &&
-                                c.getDescription().toLowerCase().contains(lowerCaseKeyword)))
-                .map(this::convertToDTO)
+        CategoryContext ctx = loadContext();
+        return categoryRepository.searchByNameOrDescription(keyword).stream()
+                .map(c -> convertToDTO(c, ctx))
                 .collect(Collectors.toList());
     }
 
     /**
-     * 获取有文章的收藏夹列表
+     * 获取有文章的收藏夹列表（SQL JOIN 过滤，避免全表加载后在内存判断）
      */
     @Cacheable(cacheNames = "category:list")
     public List<CategoryDTO> getCategoriesWithArticles() {
-        return categoryRepository.findAll().stream()
-                .filter(c -> !c.getArticles().isEmpty())
-                .map(this::convertToDTO)
+        CategoryContext ctx = loadContext();
+        return categoryRepository.findWithArticles().stream()
+                .map(c -> convertToDTO(c, ctx))
                 .collect(Collectors.toList());
     }
 
     // ==================== 辅助方法 ====================
 
     /**
-     * 检查是否是子收藏夹（避免循环引用）
+     * 检查是否是子收藏夹（避免循环引用，基于预加载映射纯内存遍历）
      */
-    private boolean isChildCategory(Category potentialChild, Category potentialParent) {
-        Category current = potentialChild;
-        while (current != null) {
-            if (current.equals(potentialParent)) {
+    private boolean isChildCategory(Category potentialChild, Category potentialParent, Map<Long, Category> categoriesById) {
+        Long currentId = potentialChild.getId();
+        while (currentId != null) {
+            Category current = categoriesById.get(currentId);
+            if (current == null) {
+                return false;
+            }
+            if (current.getId().equals(potentialParent.getId())) {
                 return true;
             }
-            current = current.getParentCategory();
+            currentId = current.getParentCategory() != null ? current.getParentCategory().getId() : null;
         }
         return false;
     }
 
     /**
-     * 转换为 CategoryDTO
+     * 转换为 CategoryDTO（文章数、父分类、子分类均取自预加载上下文，无懒加载查询）
      */
-    private CategoryDTO convertToDTO(Category category) {
+    private CategoryDTO convertToDTO(Category category, CategoryContext ctx) {
         CategoryDTO dto = CategoryDTO.builder()
                 .id(category.getId())
                 .name(category.getName())
                 .description(category.getDescription())
-                .articleCount(countArticlesInCategory(category))
+                .articleCount(ctx.articleCounts().getOrDefault(category.getId(), 0L).intValue())
                 .build();
 
-        // 设置父收藏夹信息
+        // 设置父收藏夹信息（父分类名称从预加载映射解析，避免访问懒加载代理属性）
         if (category.getParentCategory() != null) {
-            dto.setParentCategoryId(category.getParentCategory().getId());
-            dto.setParentCategoryName(category.getParentCategory().getName());
+            Long parentId = category.getParentCategory().getId();
+            Category parent = parentId != null ? ctx.categoriesById().get(parentId) : null;
+            if (parent != null) {
+                dto.setParentCategoryId(parent.getId());
+                dto.setParentCategoryName(parent.getName());
+            }
         }
 
         // 设置子收藏夹列表（只转换一层，避免无限递归）
-        if (!category.getSubCategories().isEmpty()) {
-            List<CategoryDTO> subCategoryDTOs = category.getSubCategories().stream()
+        List<Category> subCategories = ctx.childrenMap().getOrDefault(category.getId(), List.of());
+        if (!subCategories.isEmpty()) {
+            List<CategoryDTO> subCategoryDTOs = subCategories.stream()
                     .map(sub -> CategoryDTO.builder()
                             .id(sub.getId())
                             .name(sub.getName())
                             .description(sub.getDescription())
-                            .articleCount(countArticlesInCategory(sub))
+                            .articleCount(ctx.articleCounts().getOrDefault(sub.getId(), 0L).intValue())
                             .build())
                     .collect(Collectors.toList());
             dto.setSubCategories(subCategoryDTOs);
@@ -507,10 +548,10 @@ public class CategoryService {
     }
 
     /**
-     * 获取顶级收藏夹数量
+     * 获取顶级收藏夹数量（SQL count，避免加载全部顶级收藏夹实体）
      */
     @Cacheable(cacheNames = "category:list")
     public long getTopLevelCategoryCount() {
-        return categoryRepository.findByParentCategoryIsNull().size();
+        return categoryRepository.countByParentCategoryIsNull();
     }
 }

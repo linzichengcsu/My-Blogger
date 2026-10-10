@@ -150,8 +150,8 @@ public class AdminService {
                 })
                 .collect(Collectors.toList());
 
-        // 最近的 5 篇文章
-        List<Map<String, Object>> recentArticles = articleRepository.findAll(
+        // 最近的 5 篇文章（预加载作者，避免逐篇懒加载）
+        List<Map<String, Object>> recentArticles = articleRepository.findAllWithAuthor(
                         PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .getContent()
                 .stream()
@@ -166,8 +166,8 @@ public class AdminService {
                 })
                 .collect(Collectors.toList());
 
-        // 最近的 5 条评论
-        List<Map<String, Object>> recentComments = commentRepository.findAll(
+        // 最近的 5 条评论（预加载评论者与文章，避免逐条懒加载）
+        List<Map<String, Object>> recentComments = commentRepository.findAllWithDetails(
                         PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "createdAt")))
                 .getContent()
                 .stream()
