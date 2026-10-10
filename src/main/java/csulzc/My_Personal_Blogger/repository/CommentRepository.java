@@ -99,4 +99,11 @@ public interface CommentRepository extends BaseRepository<Comment, Long> {
     @EntityGraph(attributePaths = {"commenter", "article"})
     @Query("SELECT c FROM Comment c")
     Page<Comment> findAllWithDetails(Pageable pageable);
+
+    // 一次性聚合评论统计（总数/待审核/已审核），替代 3 条独立 count
+    @Query("SELECT COUNT(c), " +
+            "COALESCE(SUM(CASE WHEN c.isApproved = false THEN 1 ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN c.isApproved = true THEN 1 ELSE 0 END), 0) " +
+            "FROM Comment c")
+    List<Object[]> getAggregateStats();
 }

@@ -34,6 +34,20 @@ public class CommentService {
     /** 批量 IN 子句的单批上限，避免超长 IN 子句导致性能退化或超限 */
     private static final int BATCH_SIZE = 500;
 
+    /** 评论可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
+    private static final Map<String, String> COMMENT_SORT_WHITELIST = Map.of(
+            "createdAt", "createdAt",
+            "likeCount", "likeCount",
+            "id", "id"
+    );
+
+    /**
+     * 构建安全的评论排序（非法字段回退到 createdAt）
+     */
+    private Sort safeSort(String sortBy) {
+        return Sort.by(COMMENT_SORT_WHITELIST.getOrDefault(sortBy, "createdAt")).descending();
+    }
+
     private final CommentRepository commentRepository;
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
@@ -164,7 +178,7 @@ public class CommentService {
         Article article = articleRepository.findById(articleId)
                 .orElseThrow(() -> new EntityNotFoundException("文章不存在"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size, safeSort(sortBy));
         Page<Comment> commentPage = commentRepository.findByArticleAndParentCommentIsNull(article, pageable);
 
         // 批量预加载所有顶级评论的回复数与回复预览，避免逐条懒加载（N+1）
@@ -198,7 +212,7 @@ public class CommentService {
         Comment parentComment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new EntityNotFoundException("评论不存在"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size, safeSort(sortBy));
         Page<Comment> replyPage = commentRepository.findByParentComment(parentComment, pageable);
 
         List<CommentReplyDTO> content = replyPage.getContent().stream()
@@ -223,7 +237,7 @@ public class CommentService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size, safeSort(sortBy));
         Page<Comment> commentPage = commentRepository.findByCommenter(user, pageable);
 
         // 批量预加载所有评论的回复数与回复预览，避免逐条懒加载（N+1）

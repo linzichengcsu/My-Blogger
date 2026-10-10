@@ -35,79 +35,65 @@ public class AdminService {
 
     @Transactional(readOnly = true)
     public DashboardStatsDTO getDashboardStats() {
+        DashboardStatsDTO.ArticleStats articleStats = getArticleStats();
         return DashboardStatsDTO.builder()
                 .userStats(getUserStats())
-                .articleStats(getArticleStats())
+                .articleStats(articleStats)
                 .commentStats(getCommentStats())
-                .additionalMetrics(getAdditionalMetrics())
+                .additionalMetrics(getAdditionalMetrics(articleStats.getTotalArticles()))
                 .build();
     }
 
     private DashboardStatsDTO.UserStats getUserStats() {
-        Long totalUsers = userRepository.count();
-
-        Long activeUsers = userRepository.countByStatus(User.UserStatus.ACTIVE);
-
         LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
-        Long newUsersToday = userRepository.countByCreatedAtAfter(startOfToday);
-
         LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
-        Long newUsersThisMonth = userRepository.countByCreatedAtAfter(startOfMonth);
+
+        // 一条聚合 SQL 替代 4 条独立 count
+        Object[] stats = userRepository.getAggregateStats(User.UserStatus.ACTIVE, startOfToday, startOfMonth).get(0);
 
         return DashboardStatsDTO.UserStats.builder()
-                .totalUsers(totalUsers)
-                .activeUsers(activeUsers)
-                .newUsersToday(newUsersToday)
-                .newUsersThisMonth(newUsersThisMonth)
+                .totalUsers(((Number) stats[0]).longValue())
+                .activeUsers(((Number) stats[1]).longValue())
+                .newUsersToday(((Number) stats[2]).longValue())
+                .newUsersThisMonth(((Number) stats[3]).longValue())
                 .build();
     }
 
     private DashboardStatsDTO.ArticleStats getArticleStats() {
-        Long totalArticles = articleRepository.count();
-
-        Long publishedArticles = articleRepository.countByStatus(Article.ArticleStatus.RELEASE);
-
-        Long draftArticles = articleRepository.countByStatus(Article.ArticleStatus.DRAFT);
-
-        Long totalViews = articleRepository.sumViewCount();
-
-        Long totalLikes = articleRepository.sumLikeCount();
+        // 一条聚合 SQL 替代 5 条独立 count/sum
+        Object[] stats = articleRepository.getAggregateStats(Article.ArticleStatus.RELEASE, Article.ArticleStatus.DRAFT).get(0);
 
         return DashboardStatsDTO.ArticleStats.builder()
-                .totalArticles(totalArticles)
-                .publishedArticles(publishedArticles)
-                .draftArticles(draftArticles)
-                .totalViews(totalViews)
-                .totalLikes(totalLikes)
+                .totalArticles(((Number) stats[0]).longValue())
+                .publishedArticles(((Number) stats[1]).longValue())
+                .draftArticles(((Number) stats[2]).longValue())
+                .totalViews(((Number) stats[3]).longValue())
+                .totalLikes(((Number) stats[4]).longValue())
                 .build();
     }
 
     private DashboardStatsDTO.CommentStats getCommentStats() {
-        Long totalComments = commentRepository.count();
-
-        Long pendingComments = commentRepository.countByIsApproved(false);
-
-        Long approvedComments = commentRepository.countByIsApproved(true);
+        // 一条聚合 SQL 替代 3 条独立 count
+        Object[] stats = commentRepository.getAggregateStats().get(0);
 
         return DashboardStatsDTO.CommentStats.builder()
-                .totalComments(totalComments)
-                .pendingComments(pendingComments)
-                .approvedComments(approvedComments)
+                .totalComments(((Number) stats[0]).longValue())
+                .pendingComments(((Number) stats[1]).longValue())
+                .approvedComments(((Number) stats[2]).longValue())
                 .build();
     }
 
-    private Map<String, Object> getAdditionalMetrics() {
+    private Map<String, Object> getAdditionalMetrics(long totalArticles) {
         Map<String, Object> metrics = new HashMap<>();
 
-        metrics.put("topCategories", getCategoryStats());
+        metrics.put("topCategories", getCategoryStats(totalArticles));
         metrics.put("recentActivity", getRecentActivity());
 
         return metrics;
     }
 
-    private Object getCategoryStats() {
+    private Object getCategoryStats(long totalArticles) {
         List<Object[]> categoryData = categoryRepository.findAllWithArticleCount();
-        long totalArticles = articleRepository.count();
 
         List<Map<String, Object>> categoryStats = categoryData.stream()
                 .map(obj -> {

@@ -280,13 +280,21 @@ public class ArticleService {
         return parts;
     }
 
-    @CacheEvict(cacheNames = "article:detail", key = "#articleId")
+    /**
+     * 点赞文章。
+     * 注意：不再 @CacheEvict 详情缓存——每次点赞都失效缓存会让热点文章在频繁点赞时反复重建
+     * 详情（每次重建还伴随额外查询），放大数据库压力。改为依赖缓存 TTL 自然过期，
+     * 点赞数在缓存期内最多滞后一个 TTL 周期。
+     */
     @Transactional(timeout = 10)
     public void likeArticle(Long articleId) {
         articleRepository.incrementLikeCount(articleId);
     }
 
-    @CacheEvict(cacheNames = "article:detail", key = "#articleId")
+    /**
+     * 浏览文章。
+     * 注意：同 likeArticle，不再 @CacheEvict 详情缓存，避免高并发浏览导致缓存穿透放大慢查询。
+     */
     @Transactional(timeout = 10)
     public void viewArticle(Long articleId) {
         articleRepository.incrementViewCount(articleId);

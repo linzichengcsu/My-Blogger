@@ -29,6 +29,20 @@ public class CategoryService {
 
     private final CategoryRepository categoryRepository;
 
+    /** 分类可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
+    private static final Map<String, String> CATEGORY_SORT_WHITELIST = Map.of(
+            "createdAt", "createdAt",
+            "updatedAt", "updatedAt",
+            "id", "id"
+    );
+
+    /**
+     * 构建安全的分类排序（非法字段回退到 createdAt）
+     */
+    private Sort safeSort(String sortBy) {
+        return Sort.by(CATEGORY_SORT_WHITELIST.getOrDefault(sortBy, "createdAt")).descending();
+    }
+
     /**
      * 分类查询上下文：一次加载全量分类、文章数聚合与父子关系映射，
      * 供各查询方法在内存中组装 DTO，避免逐分类懒加载（N+1）。
@@ -197,7 +211,7 @@ public class CategoryService {
      */
     @Cacheable(cacheNames = "category:list")
     public PageResponseDTO<CategoryDTO> getAllCategories(int page, int size, String sortBy) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size, safeSort(sortBy));
         Page<Category> categoryPage = categoryRepository.findAll(pageable);
 
         CategoryContext ctx = loadContext();

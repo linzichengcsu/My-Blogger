@@ -115,4 +115,14 @@ public interface ArticleRepository extends BaseRepository<Article, Long> {
     // 单个作者的获赞总数（SQL 聚合，避免加载该作者全部文章实体）
     @Query("SELECT COALESCE(SUM(a.likeCount), 0) FROM Article a WHERE a.author = :author")
     long sumLikeCountByAuthor(@Param("author") User author);
+
+    // 一次性聚合文章统计（总数/已发布/草稿/总浏览/总点赞），替代 5 条独立 count/sum
+    @Query("SELECT COUNT(a), " +
+            "COALESCE(SUM(CASE WHEN a.status = :releaseStatus THEN 1 ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN a.status = :draftStatus THEN 1 ELSE 0 END), 0), " +
+            "COALESCE(SUM(a.viewCount), 0), " +
+            "COALESCE(SUM(a.likeCount), 0) " +
+            "FROM Article a")
+    List<Object[]> getAggregateStats(@Param("releaseStatus") Article.ArticleStatus releaseStatus,
+                                     @Param("draftStatus") Article.ArticleStatus draftStatus);
 }

@@ -45,4 +45,14 @@ public interface UserRepository extends BaseRepository<User, Long> {
 
     // 按用户名或显示名称模糊搜索（数据库过滤 + 数据库分页，避免 findAll 后在内存过滤/分页）
     Page<User> findByUsernameContainingOrDisplayNameContaining(String username, String displayName, Pageable pageable);
+
+    // 一次性聚合用户统计（总数/活跃/今日新增/本月新增），替代 4 条独立 count
+    @Query("SELECT COUNT(u), " +
+            "COALESCE(SUM(CASE WHEN u.status = :activeStatus THEN 1 ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN u.createdAt >= :todayStart THEN 1 ELSE 0 END), 0), " +
+            "COALESCE(SUM(CASE WHEN u.createdAt >= :monthStart THEN 1 ELSE 0 END), 0) " +
+            "FROM User u")
+    List<Object[]> getAggregateStats(@Param("activeStatus") User.UserStatus activeStatus,
+                                     @Param("todayStart") LocalDateTime todayStart,
+                                     @Param("monthStart") LocalDateTime monthStart);
 }

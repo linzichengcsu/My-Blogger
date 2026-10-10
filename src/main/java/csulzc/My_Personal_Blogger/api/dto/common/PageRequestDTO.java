@@ -11,6 +11,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.util.List;
+import java.util.Map;
 
 @Data
 @SuperBuilder
@@ -30,8 +31,20 @@ public class PageRequestDTO {
     @Pattern(regexp = "^(asc|desc|ASC|DESC)$", message = "只能按照升序或降序排列")
     private String sortDirection;
 
+    /** 允许排序的字段白名单（文章相关实体），避免无索引/不存在字段排序导致 filesort 或 500 */
+    private static final Map<String, String> SORT_WHITELIST = Map.of(
+            "createdAt", "createdAt",
+            "updatedAt", "updatedAt",
+            "likeCount", "likeCount",
+            "viewCount", "viewCount",
+            "favoriteCount", "favoriteCount",
+            "id", "id"
+    );
+
     public Pageable toPageable() {
-        Sort sort = Sort.by(Sort.Direction.fromString(sortDirection), sortBy);
+        String safeSortBy = SORT_WHITELIST.getOrDefault(sortBy, "createdAt");
+        String safeDirection = sortDirection != null && "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
+        Sort sort = Sort.by(Sort.Direction.fromString(safeDirection), safeSortBy);
         return PageRequest.of(page, size, sort);
     }
 }

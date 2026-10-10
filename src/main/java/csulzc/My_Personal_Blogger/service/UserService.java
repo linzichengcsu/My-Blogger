@@ -39,6 +39,21 @@ public class UserService {
     private final SecurityContextUtil securityContextUtil;
     private final PasswordValidator passwordValidator;
 
+    /** 用户可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
+    private static final Map<String, String> USER_SORT_WHITELIST = Map.of(
+            "createdAt", "createdAt",
+            "updatedAt", "updatedAt",
+            "lastLoginAt", "lastLoginAt",
+            "id", "id"
+    );
+
+    /**
+     * 构建安全的用户排序（非法字段回退到 createdAt）
+     */
+    private Sort safeSort(String sortBy) {
+        return Sort.by(USER_SORT_WHITELIST.getOrDefault(sortBy, "createdAt")).descending();
+    }
+
     // ==================== 用户注册与登录 ====================
 
     /**
@@ -194,9 +209,11 @@ public class UserService {
 
     /**
      * 获取用户公开资料（通过用户名）
+     * 注：此处仅需用户基础信息，使用 findByUsername（避免 findByUsernameWithArticles 的
+     * LEFT JOIN FETCH u.articles 把该用户全部文章实体拉进内存）
      */
     public UserProfileDTO getUserProfileByUsername(String username) {
-        User user = userRepository.findByUsernameWithArticles(username)
+        User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
         return convertToProfileDTO(user);
     }
@@ -410,7 +427,7 @@ public class UserService {
      * 分页查询所有用户
      */
     public PageResponseDTO<UserProfileDTO> getAllUsers(int page, int size, String sortBy) {
-        Pageable pageable = PageRequest.of(page, size, Sort.by(sortBy).descending());
+        Pageable pageable = PageRequest.of(page, size, safeSort(sortBy));
         Page<User> userPage = userRepository.findAll(pageable);
 
         Map<Long, Long> articleCounts = loadArticleCounts(userPage.getContent());
