@@ -6,10 +6,14 @@ import csulzc.My_Personal_Blogger.api.dto.category.CategoryDTO;
 import csulzc.My_Personal_Blogger.api.dto.user.UserProfileDTO;
 import csulzc.My_Personal_Blogger.domain.entity.*;
 import csulzc.My_Personal_Blogger.repository.*;
+import csulzc.My_Personal_Blogger.search.ArticleIndexEvent;
+import csulzc.My_Personal_Blogger.search.ArticleIndexPayload;
+import csulzc.My_Personal_Blogger.search.ArticleSearchService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
@@ -33,6 +37,9 @@ public class ArticleService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final SecurityContextUtil securityContextUtil;
+    private final ArticleSearchService articleSearchService;
+    private final ArticleListAssembler articleListAssembler;
+    private final ApplicationEventPublisher applicationEventPublisher;
 
     /**
      * 创建文章
@@ -66,6 +73,9 @@ public class ArticleService {
         }
 
         Article savedArticle = articleRepository.save(article);
+
+        // 事务提交后同步到 Elasticsearch（AFTER_COMMIT 监听器消费，失败不影响主流程）
+        publishIndexEvent(savedArticle);
 
         return convertToDetailDTO(savedArticle);
     }
@@ -121,6 +131,10 @@ public class ArticleService {
         }
 
         Article updatedArticle = articleRepository.save(article);
+
+        // 事务提交后同步到 Elasticsearch（覆盖旧文档）
+        publishIndexEvent(updatedArticle);
+
         return convertToDetailDTO(updatedArticle);
     }
 
@@ -141,6 +155,9 @@ public class ArticleService {
 
         article.setStatus(Article.ArticleStatus.RELEASE);
         Article publishedArticle = articleRepository.save(article);
+
+        // 状态变化同样需要同步索引（搜索侧文档中的 status 保持最新）
+        publishIndexEvent(publishedArticle);
 
         return convertToDetailDTO(publishedArticle);
     }
@@ -163,6 +180,9 @@ public class ArticleService {
         article.setStatus(Article.ArticleStatus.ARCHIVE);
         Article archivedArticle = articleRepository.save(article);
 
+        // 状态变化同样需要同步索引
+        publishIndexEvent(archivedArticle);
+
         return convertToDetailDTO(archivedArticle);
     }
 
@@ -183,7 +203,7 @@ public class ArticleService {
     @Cacheable(cacheNames = "article:list", key = "#pageable")
     public PageResponseDTO<ArticleListItemDTO> getArticleList(Pageable pageable) {
         Page<Article> articlePage = articleRepository.findAllWithAuthor(pageable);
-        return buildListResponse(articlePage);
+        return articleListAssembler.buildPageResponse(articlePage);
     }
 
     /**
@@ -192,15 +212,14 @@ public class ArticleService {
     @Cacheable(cacheNames = "article:list", key = "#author.id + #pageable")
     public PageResponseDTO<ArticleListItemDTO> getArticlesByAuthor(User author, Pageable pageable) {
         Page<Article> articlePage = articleRepository.findByAuthor(author, pageable);
-        return buildListResponse(articlePage);
+        return articleListAssembler.buildPageResponse(articlePage);
     }
 
     /**
-     * 搜索文章（根据标题）
+     * 搜索文章（Elasticsearch 全文检索，未启用或异常时降级为标题 LIKE）
      */
     public PageResponseDTO<ArticleListItemDTO> searchArticles(String keyword, Pageable pageable) {
-        Page<Article> articlePage = articleRepository.findByTitleContaining(keyword, pageable);
-        return buildListResponse(articlePage);
+        return articleSearchService.search(keyword, pageable);
     }
 
     /**
@@ -224,6 +243,9 @@ public class ArticleService {
         commentRepository.deleteRepliesByArticle(article);
         commentRepository.deleteTopLevelByArticle(article);
         articleRepository.deleteByIdDirect(articleId);
+
+        // 事务提交后从 Elasticsearch 删除对应文档
+        publishDeleteEvent(articleId);
     }
 
     @CacheEvict(cacheNames = "article:list", allEntries = true)
@@ -239,6 +261,8 @@ public class ArticleService {
             commentRepository.batchDeleteTopLevelByArticleIds(batch);
             articleRepository.batchDeleteCategoryMappings(batch);
             total += articleRepository.batchDeleteByIds(batch);
+            // 事务提交后从 Elasticsearch 批量删除
+            publishBulkDeleteEvent(batch);
         }
         return total;
     }
@@ -252,6 +276,8 @@ public class ArticleService {
         int total = 0;
         for (List<Long> batch : partition(articleIds, BATCH_SIZE)) {
             total += articleRepository.batchUpdateStatus(batch, Article.ArticleStatus.RELEASE);
+            // 批量更新为直接 SQL，需重新加载最新状态并同步索引
+            publishBulkIndexEvent(batch);
         }
         return total;
     }
@@ -265,6 +291,8 @@ public class ArticleService {
         int total = 0;
         for (List<Long> batch : partition(articleIds, BATCH_SIZE)) {
             total += articleRepository.batchUpdateStatus(batch, Article.ArticleStatus.ARCHIVE);
+            // 批量更新为直接 SQL，需重新加载最新状态并同步索引
+            publishBulkIndexEvent(batch);
         }
         return total;
     }
@@ -330,116 +358,61 @@ public class ArticleService {
                 .likeCount(article.getLikeCount())
                 .favoriteCount(article.getFavoriteCount())
                 .commentCount((int) commentRepository.countByArticle(article))
-                .author(convertToUserProfileDTO(article.getAuthor()))
-                .categories(convertToCategoryDTOs(article.getCategories()))
+                .author(articleListAssembler.convertToUserProfileDTO(article.getAuthor()))
+                .categories(articleListAssembler.convertToCategoryDTOs(article.getCategories()))
                 .build();
     }
 
-    private UserProfileDTO convertToUserProfileDTO(User user) {
-        if (user == null) {
-            return null;
-        }
+    // ==================== Elasticsearch 同步事件发布 ====================
+    // 事件在事务内发布，由 ArticleIndexEventListener 在事务提交后（AFTER_COMMIT）
+    // 消费并同步到 ES；ES 不可用时自动跳过/失败降级，不影响主业务事务。
 
-        if (user.getId() == null) {
-            return UserProfileDTO.builder()
-                    .username(user.getUsername())
-                    .displayName(user.getDisplayName())
-                    .avatar(user.getAvatar())
-                    .bio(user.getBio())
-                    .createdAt(user.getCreatedAt())
-                    .build();
-        }
-
-        return UserProfileDTO.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .displayName(user.getDisplayName())
-                .avatar(user.getAvatar())
-                .bio(user.getBio())
-                .createdAt(user.getCreatedAt())
-                .build();
-    }
     /**
-     * 组装分页文章列表：批量预加载评论数与分类映射，避免逐篇懒加载（N+1）
+     * 发布单篇文章索引/更新事件（事务提交后覆盖 ES 文档）
      */
-    private PageResponseDTO<ArticleListItemDTO> buildListResponse(Page<Article> articlePage) {
-        List<Article> articles = articlePage.getContent();
-        List<Long> articleIds = articles.stream().map(Article::getId).collect(Collectors.toList());
-
-        Map<Long, Long> commentCounts = loadCommentCounts(articleIds);
-        Map<Long, Set<Category>> categoryMap = loadCategoryMappings(articleIds);
-
-        List<ArticleListItemDTO> content = articles.stream()
-                .map(article -> convertToListItemDTO(
-                        article,
-                        commentCounts.getOrDefault(article.getId(), 0L),
-                        categoryMap.getOrDefault(article.getId(), Set.of())))
-                .collect(Collectors.toList());
-
-        return PageResponseDTO.<ArticleListItemDTO>builder()
-                .content(content)
-                .totalElements(articlePage.getTotalElements())
-                .totalPages(articlePage.getTotalPages())
-                .page(articlePage.getNumber())
-                .size(articlePage.getSize())
-                .build();
+    private void publishIndexEvent(Article article) {
+        if (article == null || article.getId() == null) {
+            return;
+        }
+        applicationEventPublisher.publishEvent(new ArticleIndexEvent(
+                this, ArticleIndexEvent.Operation.INDEX, List.of(ArticleIndexPayload.from(article, null))));
     }
 
     /**
-     * 批量查询评论数：articleId -> count（一条 SQL 替代逐篇懒加载评论集合）
+     * 发布单篇文章删除事件（事务提交后删除 ES 文档）
      */
-    private Map<Long, Long> loadCommentCounts(List<Long> articleIds) {
-        if (articleIds.isEmpty()) {
-            return new HashMap<>();
-        }
-        return commentRepository.countByArticleIds(articleIds).stream()
-                .collect(Collectors.toMap(row -> (Long) row[0], row -> ((Number) row[1]).longValue()));
+    private void publishDeleteEvent(Long articleId) {
+        applicationEventPublisher.publishEvent(new ArticleIndexEvent(
+                this, ArticleIndexEvent.Operation.DELETE,
+                List.of(ArticleIndexPayload.builder().articleId(articleId).build())));
     }
 
     /**
-     * 批量查询文章分类映射：articleId -> Set<Category>（一条 SQL 替代逐篇懒加载分类集合）
+     * 发布批量索引事件：重新加载最新文章数据（含作者与分类）后同步 ES。
+     * 批量更新走直接 SQL，内存中的实体已过期，必须重新查询。
      */
-    private Map<Long, Set<Category>> loadCategoryMappings(List<Long> articleIds) {
-        if (articleIds.isEmpty()) {
-            return new HashMap<>();
+    private void publishBulkIndexEvent(List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return;
         }
-        Map<Long, Set<Category>> categoryMap = new HashMap<>();
-        for (Object[] row : articleRepository.findCategoryMappingByArticleIds(articleIds)) {
-            Long articleId = (Long) row[0];
-            categoryMap.computeIfAbsent(articleId, k -> new HashSet<>()).add((Category) row[1]);
-        }
-        return categoryMap;
+        List<ArticleIndexPayload> payloads = articleRepository.findByIdsWithAuthorAndCategories(articleIds).stream()
+                .map(article -> ArticleIndexPayload.from(article, null))
+                .toList();
+        applicationEventPublisher.publishEvent(new ArticleIndexEvent(
+                this, ArticleIndexEvent.Operation.BULK_INDEX, payloads));
     }
 
     /**
-     * 转换为 ArticleListItemDTO（列表场景：评论数与分类由批量查询预加载，不再访问懒加载集合）
+     * 发布批量删除事件（事务提交后批量删除 ES 文档）
      */
-    private ArticleListItemDTO convertToListItemDTO(Article article, long commentCount, Set<Category> categories) {
-        return ArticleListItemDTO.builder()
-                .id(article.getId())
-                .title(article.getTitle())
-                .summary(article.getSummary())
-                .coverImage(article.getCoverImage())
-                .createdAt(article.getCreatedAt())
-                .likeCount(article.getLikeCount())
-                .commentCount((int) commentCount)
-                .author(convertToUserProfileDTO(article.getAuthor()))
-                .categories(convertToCategoryDTOs(categories))
-                .build();
-    }
-
-    /**
-     * 转换 Category 列表为 CategoryDTO 列表
-     */
-    private List<CategoryDTO> convertToCategoryDTOs(Set<Category> categories) {
-        if (categories == null) {
-            return new ArrayList<>();
+    private void publishBulkDeleteEvent(List<Long> articleIds) {
+        if (articleIds == null || articleIds.isEmpty()) {
+            return;
         }
-
-        return categories.stream()
-                .map(category -> CategoryDTO.builder()
-                        .name(category.getName())
-                        .build())
-                .collect(Collectors.toList());
+        List<ArticleIndexPayload> payloads = articleIds.stream()
+                .map(id -> ArticleIndexPayload.builder().articleId(id).build())
+                .toList();
+        applicationEventPublisher.publishEvent(new ArticleIndexEvent(
+                this, ArticleIndexEvent.Operation.BULK_DELETE, payloads));
     }
 }

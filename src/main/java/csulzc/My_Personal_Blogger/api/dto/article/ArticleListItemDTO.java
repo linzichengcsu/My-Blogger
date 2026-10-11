@@ -27,4 +27,10 @@ public class ArticleListItemDTO extends BaseDTO {
     private Integer likeCount;
     private Integer commentCount;
     private Integer favoriteCount;
+
+    /** Elasticsearch 命中高亮后的标题片段（含 &lt;em&gt; 标签，可为空） */
+    private String highlightTitle;
+
+    /** Elasticsearch 命中高亮后的摘要片段（含 &lt;em&gt; 标签，可为空） */
+    private String highlightSummary;
 }

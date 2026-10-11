@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -130,12 +131,15 @@ public class ArticleController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "搜索文章", description = "公开访问")
+    @Operation(summary = "搜索文章", description = "公开访问，基于 Elasticsearch 全文检索（未启用或异常时自动降级为标题模糊匹配）")
     public ResponseEntity<Result<PageResponseDTO<ArticleListItemDTO>>> searchArticles(
             @RequestParam String keyword,
             @ModelAttribute PageRequestDTO pageRequest) {
         if (keyword == null || keyword.trim().isEmpty()) {
             throw new IllegalArgumentException("搜索关键词不能为空");
+        }
+        if (keyword.trim().length() > 100) {
+            throw new IllegalArgumentException("搜索关键词长度不能超过100个字符");
         }
         if (pageRequest == null) {
             throw new IllegalArgumentException("分页参数不能为空");
@@ -146,8 +150,11 @@ public class ArticleController {
         if (pageRequest.getSize() <= 0 || pageRequest.getSize() > 100) {
             throw new IllegalArgumentException("每页大小必须在1-100之间");
         }
-        Pageable pageable = pageRequest.toPageable();
-        PageResponseDTO<ArticleListItemDTO> articles = articleService.searchArticles(keyword, pageable);
+        // 未显式指定排序字段时按相关性（ES _score）返回，而非默认时间倒序
+        Pageable pageable = pageRequest.getSortBy() == null || pageRequest.getSortBy().trim().isEmpty()
+                ? PageRequest.of(pageRequest.getPage(), pageRequest.getSize())
+                : pageRequest.toPageable();
+        PageResponseDTO<ArticleListItemDTO> articles = articleService.searchArticles(keyword.trim(), pageable);
         return ResponseEntity.ok(Result.success(articles));
     }
 

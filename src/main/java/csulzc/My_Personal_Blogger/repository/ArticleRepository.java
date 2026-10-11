@@ -100,6 +100,11 @@ public interface ArticleRepository extends BaseRepository<Article, Long> {
     @Query("SELECT a FROM Article a WHERE a.id = :id")
     Optional<Article> findDetailById(@Param("id") Long id);
 
+    // 按 ID 集合批量加载并预加载作者与分类（供 ES 批量同步 / 重建索引，无分页可安全 fetch to-many）
+    @EntityGraph(attributePaths = {"author", "categories"})
+    @Query("SELECT a FROM Article a WHERE a.id IN :ids")
+    List<Article> findByIdsWithAuthorAndCategories(@Param("ids") List<Long> ids);
+
     // 一次查询多篇文章的分类映射（articleId -> categories），供列表 DTO 组装，避免每篇一次懒加载
     @Query("SELECT a.id, c FROM Article a JOIN a.categories c WHERE a.id IN :ids")
     List<Object[]> findCategoryMappingByArticleIds(@Param("ids") List<Long> ids);

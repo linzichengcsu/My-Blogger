@@ -4,6 +4,7 @@ import csulzc.My_Personal_Blogger.api.dto.category.CategoryDTO;
 import csulzc.My_Personal_Blogger.api.dto.user.UserProfileDTO;
 import csulzc.My_Personal_Blogger.domain.entity.*;
 import csulzc.My_Personal_Blogger.repository.*;
+import csulzc.My_Personal_Blogger.search.ArticleSearchService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import csulzc.My_Personal_Blogger.api.dto.article.*;
 import org.junit.jupiter.api.*;
@@ -29,7 +30,8 @@ import static org.mockito.Mockito.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({ArticleService.class, CategoryService.class, SecurityContextUtil.class})
+@Import({ArticleService.class, CategoryService.class, SecurityContextUtil.class,
+        ArticleListAssembler.class, ArticleSearchService.class, csulzc.My_Personal_Blogger.config.ElasticsearchProperties.class})
 @DisplayName("ArticleService 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ArticleServiceTest {

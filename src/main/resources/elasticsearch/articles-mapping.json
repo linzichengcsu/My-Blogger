@@ -1,0 +1,45 @@
+{
+  "mappings": {
+    "properties": {
+      "id": {
+        "type": "long"
+      },
+      "title": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "summary": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "content": {
+        "type": "text",
+        "analyzer": "ik_max_word",
+        "search_analyzer": "ik_smart"
+      },
+      "status": {
+        "type": "keyword"
+      },
+      "authorId": {
+        "type": "long"
+      },
+      "authorName": {
+        "type": "keyword"
+      },
+      "categoryIds": {
+        "type": "long"
+      },
+      "likeCount": {
+        "type": "integer"
+      },
+      "viewCount": {
+        "type": "integer"
+      },
+      "createdAt": {
+        "type": "long"
+      }
+    }
+  }
+}
