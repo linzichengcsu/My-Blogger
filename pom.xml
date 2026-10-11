@@ -57,6 +57,13 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+
+        <!-- Elasticsearch 全文检索（Spring Boot 4.1.1 BOM 管理 elasticsearch-java 9.4.5，
+             对应 ES 服务端 9.x；IK 中文分词见 docs/elasticsearch-setup.md） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-elasticsearch</artifactId>
+        </dependency>
         <!-- Lettuce 连接池（使用 lettuce.pool 配置时需要） -->
         <dependency>
             <groupId>org.apache.commons</groupId>
@@ -207,6 +214,15 @@
 							<artifactId>lombok</artifactId>
 						</exclude>
 					</excludes>
+				</configuration>
+			</plugin>
+			<!-- JDK 21 下 Mockito inline mock maker 需要允许 self-attach，否则测试报
+			     "Could not self-attach to current VM" 而无法 mock（所有测试统一生效） -->
+			<plugin>
+				<groupId>org.apache.maven.plugins</groupId>
+				<artifactId>maven-surefire-plugin</artifactId>
+				<configuration>
+					<argLine>-Djdk.attach.allowAttachSelf=true</argLine>
 				</configuration>
 			</plugin>
             <plugin>
