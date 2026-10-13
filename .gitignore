@@ -44,3 +44,4 @@ frontend/dist/
 frontend/.env.local
 frontend/.env.*.local
 /uploads/
+/deploy/.env

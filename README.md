@@ -249,6 +249,7 @@ src/main/java/csulzc/My_Personal_Blogger\
 - 9月14日：React简易前端页面开发完成
 - 9月20日：Spring Boot大版本更新到4.1.1
 - 9月22日：在GitHub Action中添加基于前后端自动化测试的CI流水线
+- 10月10日：进行了全面的慢SQL排查与优化，系统响应速度提升明显
 
 ## 🐞 已知问题及解决规划
 

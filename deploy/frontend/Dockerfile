@@ -1,4 +1,18 @@
-FROM ubuntu:latest
-LABEL authors="admin"
+# ---------- 构建阶段 ----------
+# ---------- 构建阶段 ----------
+FROM node:22-alpine AS build
+WORKDIR /app
+RUN corepack enable
 
-ENTRYPOINT ["top", "-b"]
+COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
+RUN pnpm install --frozen-lockfile
+COPY frontend/ .
+ARG VITE_API_BASE_URL=/api
+ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
+RUN pnpm build
+
+# ---------- 托管阶段 ----------
+FROM nginx:1.27-alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY deploy/frontend/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
