@@ -1,0 +1,4 @@
+services:
+  redis:
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD}

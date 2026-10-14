@@ -149,9 +149,10 @@
 		<!-- Markdown支持 -->
 
         <!-- Flyway 数据库迁移 -->
+        <!-- Spring Boot 4 起自动配置拆分到 spring-boot-flyway 模块，必须引入 starter 才会生效 -->
         <dependency>
-            <groupId>org.flywaydb</groupId>
-            <artifactId>flyway-core</artifactId>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-flyway</artifactId>
         </dependency>
         <dependency>
             <groupId>org.flywaydb</groupId>

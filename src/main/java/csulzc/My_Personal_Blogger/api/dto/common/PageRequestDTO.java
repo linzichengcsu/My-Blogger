@@ -42,7 +42,7 @@ public class PageRequestDTO {
     );
 
     public Pageable toPageable() {
-        String safeSortBy = SORT_WHITELIST.getOrDefault(sortBy, "createdAt");
+        String safeSortBy = sortBy == null ? "createdAt" : SORT_WHITELIST.getOrDefault(sortBy, "createdAt");
         String safeDirection = sortDirection != null && "asc".equalsIgnoreCase(sortDirection) ? "asc" : "desc";
         Sort sort = Sort.by(Sort.Direction.fromString(safeDirection), safeSortBy);
         return PageRequest.of(page, size, sort);
