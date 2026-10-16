@@ -324,8 +324,9 @@ public class ArticleServiceTest {
         var result = articleService.getArticleList(pageable);
 
         assertNotNull(result);
+        // setup 中的 testArticle 为 DRAFT，公开列表仅统计已发布文章，故总数为 5
         assertThat(result.getContent()).hasSize(3);
-        assertThat(result.getTotalElements()).isEqualTo(6);
+        assertThat(result.getTotalElements()).isEqualTo(5);
         assertThat(result.getTotalPages()).isEqualTo(2);
     }
 
@@ -359,6 +360,7 @@ public class ArticleServiceTest {
                 .title("Spring Boot 教程")
                 .content("内容")
                 .author(testUser)
+                .status(Article.ArticleStatus.RELEASE)
                 .build();
         entityManager.persist(springArticle);
 
@@ -366,6 +368,7 @@ public class ArticleServiceTest {
                 .title("Java 并发编程")
                 .content("内容")
                 .author(testUser)
+                .status(Article.ArticleStatus.RELEASE)
                 .build();
         entityManager.persist(javaArticle);
         entityManager.flush();

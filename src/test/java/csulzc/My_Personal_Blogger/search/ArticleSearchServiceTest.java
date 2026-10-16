@@ -6,6 +6,7 @@ import co.elastic.clients.elasticsearch.core.search.HitsMetadata;
 import csulzc.My_Personal_Blogger.api.dto.article.ArticleListItemDTO;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.config.ElasticsearchProperties;
+import csulzc.My_Personal_Blogger.domain.entity.Article;
 import csulzc.My_Personal_Blogger.repository.ArticleRepository;
 import csulzc.My_Personal_Blogger.service.ArticleListAssembler;
 import org.junit.jupiter.api.BeforeEach;
@@ -69,7 +70,8 @@ class ArticleSearchServiceTest {
         PageResponseDTO<ArticleListItemDTO> result = service.search("关键字", anyPageable());
 
         assertThat(result).isNotNull();
-        verify(articleRepository).findByTitleContaining(eq("关键字"), any(Pageable.class));
+        verify(articleRepository).findByTitleContainingAndStatus(
+                eq("关键字"), eq(Article.ArticleStatus.RELEASE), any(Pageable.class));
         verifyNoInteractions(clientProvider);
     }
 
@@ -82,7 +84,8 @@ class ArticleSearchServiceTest {
 
         service.search("关键字", anyPageable());
 
-        verify(articleRepository).findByTitleContaining(eq("关键字"), any(Pageable.class));
+        verify(articleRepository).findByTitleContainingAndStatus(
+                eq("关键字"), eq(Article.ArticleStatus.RELEASE), any(Pageable.class));
     }
 
     @Test
@@ -120,7 +123,8 @@ class ArticleSearchServiceTest {
 
         service.search("关键字", anyPageable());
 
-        verify(articleRepository).findByTitleContaining(eq("关键字"), any(Pageable.class));
+        verify(articleRepository).findByTitleContainingAndStatus(
+                eq("关键字"), eq(Article.ArticleStatus.RELEASE), any(Pageable.class));
     }
 
     @Test
@@ -140,7 +144,8 @@ class ArticleSearchServiceTest {
         // 第二次：熔断生效，直接走 JPA，不再调用 ES
         service.search("关键字", anyPageable());
         verify(client, times(1)).search(any(Function.class), eq(ArticleDocument.class));
-        verify(articleRepository, times(2)).findByTitleContaining(eq("关键字"), any(Pageable.class));
+        verify(articleRepository, times(2)).findByTitleContainingAndStatus(
+                eq("关键字"), eq(Article.ArticleStatus.RELEASE), any(Pageable.class));
     }
 
     private Pageable anyPageable() {
