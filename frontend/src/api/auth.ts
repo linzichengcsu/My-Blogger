@@ -3,7 +3,7 @@
  * 对应 openapi.yaml：/api/users/login、/register、/refresh
  */
 import { clearAuthTokens, getAccessToken, getRefreshToken, http, setAuthTokens } from './request'
-import type { LoginResponseDTO, UserLoginRequest, UserRegisterRequest, UserDetailDTO } from '../types/user'
+import type { LoginResponseDTO, UserLoginRequest, UserPasswordResetRequest, UserRegisterRequest, UserDetailDTO } from '../types/user'
 
 /** 用户登录；成功后自动保存 token 到 localStorage */
 export async function login(data: UserLoginRequest): Promise<LoginResponseDTO> {
@@ -21,6 +21,11 @@ export async function login(data: UserLoginRequest): Promise<LoginResponseDTO> {
 /** 注册（前端仅限普通用户） */
 export function register(data: UserRegisterRequest): Promise<UserDetailDTO> {
   return http.post<UserDetailDTO>('/users/register', data)
+}
+
+/** 忘记密码：用户名 + 注册邮箱验证身份后重置密码（无需登录） */
+export function forgotPassword(data: UserPasswordResetRequest): Promise<void> {
+  return http.post<void>('/users/forgot-password', data)
 }
 
 /** 显式刷新 Token（返回新的 token 信息，不自动覆盖存储） */

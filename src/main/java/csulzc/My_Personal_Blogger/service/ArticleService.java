@@ -198,20 +198,37 @@ public class ArticleService {
     }
 
     /**
-     * 获取文章列表（分页）
+     * 获取文章列表（分页，公开列表只返回已发布文章）
      */
     @Cacheable(cacheNames = "article:list", key = "#pageable")
     public PageResponseDTO<ArticleListItemDTO> getArticleList(Pageable pageable) {
-        Page<Article> articlePage = articleRepository.findAllWithAuthor(pageable);
+        Page<Article> articlePage = articleRepository.findAllByStatusWithAuthor(Article.ArticleStatus.RELEASE, pageable);
         return articleListAssembler.buildPageResponse(articlePage);
     }
 
     /**
-     * 根据作者获取文章列表
+     * 根据作者获取文章列表。
+     * 作者本人或管理员可见全部状态（草稿/归档），其他访客仅可见已发布。
+     * 缓存 key 包含可见性标识，避免不同身份串数据。
      */
-    @Cacheable(cacheNames = "article:list", key = "#author.id + #pageable")
+    @Cacheable(cacheNames = "article:list",
+            key = "#author.id + ':' + #pageable + ':' + @securityContextUtil.canViewAllStatuses(#author.id)")
     public PageResponseDTO<ArticleListItemDTO> getArticlesByAuthor(User author, Pageable pageable) {
-        Page<Article> articlePage = articleRepository.findByAuthor(author, pageable);
+        boolean viewAll = securityContextUtil.canViewAllStatuses(author.getId());
+        Page<Article> articlePage = viewAll
+                ? articleRepository.findByAuthorAndStatus(author, null, pageable)
+                : articleRepository.findByAuthorAndStatus(author, Article.ArticleStatus.RELEASE, pageable);
+        return articleListAssembler.buildPageResponse(articlePage);
+    }
+
+    /**
+     * 管理端文章查询（仅管理员）：支持可选关键词，始终返回全部状态，
+     * 直接走数据库（不经过 ES），保证草稿/归档也能检索到。
+     */
+    public PageResponseDTO<ArticleListItemDTO> getArticlesForManage(String keyword, Pageable pageable) {
+        Page<Article> articlePage = (keyword != null && !keyword.isBlank())
+                ? articleRepository.findByTitleContainingAndStatus(keyword.trim(), null, pageable)
+                : articleRepository.findAllWithAuthor(pageable);
         return articleListAssembler.buildPageResponse(articlePage);
     }
 

@@ -83,6 +83,17 @@ public class UserController {
     }
 
     /**
+     * 忘记密码（无需登录）：用户名 + 注册邮箱验证身份后重置密码
+     */
+    @PostMapping("/forgot-password")
+    @Operation(summary = "忘记密码", description = "无需登录，通过用户名和注册邮箱验证身份后重置密码")
+    public ResponseEntity<Result<Void>> forgotPassword(
+            @Valid @RequestBody UserPasswordResetRequest request) {
+        userService.forgotPasswordReset(request.getUsername(), request.getEmail(), request.getNewPassword());
+        return ResponseEntity.ok(Result.success(null, "密码重置成功，请使用新密码登录"));
+    }
+
+    /**
      * 获取用户详情（通过ID）
      */
     @Operation(summary = "获取用户详情", description = "通过用户ID获取用户详情")

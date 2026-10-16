@@ -12,7 +12,7 @@ import SiteLayout from '@/components/SiteLayout'
 import { AuthProvider, useAuth } from '@/context/AuthContext'
 import { setUnauthorizedHandler } from '@/api'
 import { ROUTES } from '@/constants/routes'
-import { LoginPage, RegisterPage } from '@/pages/AuthPage'
+import { ForgotPasswordPage, LoginPage, RegisterPage } from '@/pages/AuthPage'
 import HomePage from '@/pages/HomePage'
 import ArticleDetailPage from '@/pages/ArticleDetailPage'
 import ProfilePage from '@/pages/ProfilePage'
@@ -98,6 +98,7 @@ export default function App() {
                 <Route path="u/:userId" element={<ProfilePage />} />
                 <Route path="login" element={<LoginPage />} />
                 <Route path="register" element={<RegisterPage />} />
+                <Route path="forgot-password" element={<ForgotPasswordPage />} />
 
                 <Route element={<RequireAuth />}>
                   <Route path="profile" element={<ProfilePage />} />

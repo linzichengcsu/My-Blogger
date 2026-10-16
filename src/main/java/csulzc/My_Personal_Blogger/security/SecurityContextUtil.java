@@ -86,4 +86,29 @@ public class SecurityContextUtil {
             throw new SecurityException("无权限操作此" + resourceName);
         }
     }
+
+    /**
+     * 获取当前登录用户ID（未登录返回 null，不抛异常）
+     */
+    public Long getCurrentUserIdOrNull() {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+
+        if (authentication == null || !authentication.isAuthenticated()) {
+            return null;
+        }
+
+        Object principal = authentication.getPrincipal();
+        return principal instanceof Long ? (Long) principal : null;
+    }
+
+    /**
+     * 是否有权查看指定作者的全部状态文章（作者本人或管理员）
+     */
+    public boolean canViewAllStatuses(Long authorId) {
+        if (isAdmin()) {
+            return true;
+        }
+        Long currentUserId = getCurrentUserIdOrNull();
+        return currentUserId != null && currentUserId.equals(authorId);
+    }
 }

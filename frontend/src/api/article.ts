@@ -60,6 +60,13 @@ export function viewArticle(articleId: number): Promise<void> {
   return http.post<void>(`/articles/${articleId}/view`)
 }
 
+/** 管理端文章列表（仅管理员，支持可选关键词，返回全部状态文章） */
+export function getManageArticles(
+  query: PageQuery & { keyword?: string } = {},
+): Promise<PageResponse<ArticleListItemDTO>> {
+  return http.get<PageResponse<ArticleListItemDTO>>('/articles/manage', { params: query })
+}
+
 /* ---------------- 批量操作 ---------------- */
 
 /** 批量发布文章（后端要求登录，业务上供管理员使用） */

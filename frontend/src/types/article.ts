@@ -16,6 +16,7 @@ export interface ArticleListItemDTO {
   coverImage?: string
   author?: import('./user').UserProfileDTO
   categories?: import('./category').CategoryDTO[]
+  status?: ArticleStatus
   likeCount?: number
   commentCount?: number
   favoriteCount?: number

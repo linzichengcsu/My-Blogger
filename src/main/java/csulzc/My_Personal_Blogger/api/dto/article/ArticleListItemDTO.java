@@ -3,6 +3,7 @@ package csulzc.My_Personal_Blogger.api.dto.article;
 import csulzc.My_Personal_Blogger.api.dto.common.BaseDTO;
 import csulzc.My_Personal_Blogger.api.dto.category.CategoryDTO;
 import csulzc.My_Personal_Blogger.api.dto.user.UserProfileDTO;
+import csulzc.My_Personal_Blogger.domain.entity.Article;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
@@ -24,6 +25,7 @@ public class ArticleListItemDTO extends BaseDTO {
     private UserProfileDTO author;
     private List<CategoryDTO> categories;
     private LocalDateTime createdAt;
+    private Article.ArticleStatus status;
     private Integer likeCount;
     private Integer commentCount;
     private Integer favoriteCount;

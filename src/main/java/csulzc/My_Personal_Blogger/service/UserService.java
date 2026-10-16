@@ -247,6 +247,29 @@ public class UserService {
     }
 
     /**
+     * 忘记密码：通过用户名 + 注册邮箱验证身份后重置密码（无需登录）
+     */
+    @Transactional
+    public void forgotPasswordReset(String username, String email, String newPassword) {
+        passwordValidator.validate(newPassword);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("用户名或邮箱不正确"));
+
+        if (!user.getEmail().equalsIgnoreCase(email)) {
+            throw new IllegalArgumentException("用户名或邮箱不正确");
+        }
+
+        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
+            throw new IllegalArgumentException("新密码不能与原密码相同");
+        }
+
+        user.setPasswordHash(passwordEncoder.encode(newPassword));
+        user.setPasswordUpdatedAt(LocalDateTime.now());
+        userRepository.save(user);
+    }
+
+    /**
      * 修改密码
      */
     @Transactional

@@ -130,8 +130,28 @@ public class ArticleController {
         return ResponseEntity.ok(Result.success(articles));
     }
 
+    @GetMapping("/manage")
+    @Operation(summary = "管理端文章列表", description = "仅管理员，支持可选关键词搜索，返回全部状态文章（含草稿/归档）")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<Result<PageResponseDTO<ArticleListItemDTO>>> getArticlesForManage(
+            @RequestParam(required = false) String keyword,
+            @ModelAttribute PageRequestDTO pageRequest) {
+        if (pageRequest == null) {
+            throw new IllegalArgumentException("分页参数不能为空");
+        }
+        if (pageRequest.getPage() < 0) {
+            throw new IllegalArgumentException("页码不能为负数");
+        }
+        if (pageRequest.getSize() <= 0 || pageRequest.getSize() > 100) {
+            throw new IllegalArgumentException("每页大小必须在1-100之间");
+        }
+        Pageable pageable = pageRequest.toPageable();
+        PageResponseDTO<ArticleListItemDTO> articles = articleService.getArticlesForManage(keyword, pageable);
+        return ResponseEntity.ok(Result.success(articles));
+    }
+
     @GetMapping("/search")
-    @Operation(summary = "搜索文章", description = "公开访问，基于 Elasticsearch 全文检索（未启用或异常时自动降级为标题模糊匹配）")
+    @Operation(summary = "搜索文章", description = "公开访问，仅返回已发布文章，基于 Elasticsearch 全文检索（未启用或异常时自动降级为标题模糊匹配）")
     public ResponseEntity<Result<PageResponseDTO<ArticleListItemDTO>>> searchArticles(
             @RequestParam String keyword,
             @ModelAttribute PageRequestDTO pageRequest) {

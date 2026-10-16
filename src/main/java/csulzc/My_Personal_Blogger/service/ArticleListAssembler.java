@@ -154,6 +154,7 @@ public class ArticleListAssembler {
                 .summary(article.getSummary())
                 .coverImage(article.getCoverImage())
                 .createdAt(article.getCreatedAt())
+                .status(article.getStatus())
                 .likeCount(article.getLikeCount())
                 .commentCount((int) commentCount)
                 .author(convertToUserProfileDTO(article.getAuthor()))

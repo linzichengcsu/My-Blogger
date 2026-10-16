@@ -1,7 +1,7 @@
 /**
  * 个人中心 / 用户主页（同一页面按路由区分）：
- * - /profile      当前用户：资料编辑、头像上传、修改密码
- * - /u/:userId    公开主页：用户卡片 + TA 的文章列表
+ * - /profile      当前用户：资料编辑、头像上传、修改密码、我的文章、收藏夹
+ * - /u/:userId    公开主页：用户卡片 + TA 的已发布文章列表
  */
 import { useCallback, useEffect, useState } from 'react'
 import {
@@ -13,7 +13,9 @@ import {
   Empty,
   Form,
   Input,
+  List,
   Pagination,
+  Popconfirm,
   Row,
   Skeleton,
   Space,
@@ -24,21 +26,41 @@ import {
   message,
 } from 'antd'
 import type { UploadProps } from 'antd'
-import { UploadOutlined } from '@ant-design/icons'
+import {
+  DeleteOutlined,
+  EditOutlined,
+  FolderOpenOutlined,
+  PlusOutlined,
+  SendOutlined,
+  UploadOutlined,
+} from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import ArticleCard from '@/components/ArticleCard'
 import {
+  archiveArticle,
   changeMyPassword,
+  createCategory,
+  deleteArticle,
+  deleteCategory,
   getArticlesByAuthor,
   getUserProfile,
+  publishArticle,
+  searchCategories,
   updateMyInfo,
   uploadFile,
 } from '@/api'
 import { ApiError } from '@/api/request'
 import { useAuth } from '@/context/AuthContext'
-import type { ArticleListItemDTO, PageResponse, UserPasswordChangeRequest, UserProfileDTO, UserUpdateRequest } from '@/types'
+import type {
+  ArticleListItemDTO,
+  CategoryDTO,
+  PageResponse,
+  UserPasswordChangeRequest,
+  UserProfileDTO,
+  UserUpdateRequest,
+} from '@/types'
 import { ROUTES } from '@/constants/routes'
-import { displayName, fileUrl, formatDate } from '@/utils'
+import { displayName, fileUrl, formatDate, formatDateTime } from '@/utils'
 
 /** customRequest 入参类型，直接从 antd 推导，避免依赖 rc-upload 内部路径 */
 type UploadRequestOption = Parameters<NonNullable<UploadProps['customRequest']>>[0]
@@ -120,6 +142,7 @@ function PublicProfile({ userId }: { userId: number }) {
 
 function MyProfile() {
   const { user, setUser, refreshUser } = useAuth()
+  const navigate = useNavigate()
   const [profileForm] = Form.useForm<UserUpdateRequest>()
   const [pwdForm] = Form.useForm<UserPasswordChangeRequest>()
   const [savingProfile, setSavingProfile] = useState(false)
@@ -197,6 +220,16 @@ function MyProfile() {
           <Tabs
             items={[
               {
+                key: 'articles',
+                label: '我的文章',
+                children: <MyArticlesTab userId={user.id!} navigate={navigate} />,
+              },
+              {
+                key: 'categories',
+                label: '收藏夹',
+                children: <MyCategoriesTab />,
+              },
+              {
                 key: 'profile',
                 label: '编辑资料',
                 children: (
@@ -260,6 +293,210 @@ function MyProfile() {
               },
             ]}
           />
+        </Card>
+      </Col>
+    </Row>
+  )
+}
+
+/* ---------------- 我的文章标签页 ---------------- */
+
+function MyArticlesTab({ userId, navigate }: { userId: number; navigate: ReturnType<typeof useNavigate> }) {
+  const [articles, setArticles] = useState<PageResponse<ArticleListItemDTO> | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [page, setPage] = useState(0)
+
+  const load = useCallback(async () => {
+    setLoading(true)
+    try {
+      // 后端对作者本人返回全部状态（含草稿/归档）
+      setArticles(await getArticlesByAuthor(userId, { page, size: 8, sortBy: 'createdAt', sortDirection: 'desc' }))
+    } finally {
+      setLoading(false)
+    }
+  }, [userId, page])
+
+  useEffect(() => { void load() }, [load])
+
+  const act = async (fn: () => Promise<unknown>, success: string) => {
+    try {
+      await fn()
+      message.success(success)
+      void load()
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : '操作失败')
+    }
+  }
+
+  const statusMap: Record<string, { label: string; color: string }> = {
+    DRAFT: { label: '草稿', color: 'default' },
+    RELEASE: { label: '已发布', color: 'green' },
+    ARCHIVE: { label: '已归档', color: 'orange' },
+  }
+
+  if (loading) return <Skeleton active />
+  if (!articles || articles.content.length === 0) {
+    return <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description="还没有文章，去写一篇吧" />
+  }
+
+  return (
+    <>
+      <List
+        dataSource={articles.content}
+        renderItem={(article) => (
+          <List.Item
+            key={article.id}
+            actions={[
+              <Button key="edit" size="small" icon={<EditOutlined />} onClick={() => navigate(ROUTES.edit(article.id!))}>编辑</Button>,
+              article.status !== 'RELEASE' && (
+                <Button key="publish" size="small" type="link" icon={<SendOutlined />} onClick={() => act(() => publishArticle(article.id!), '已发布')}>发布</Button>
+              ),
+              article.status !== 'ARCHIVE' && (
+                <Button key="archive" size="small" type="link" icon={<FolderOpenOutlined />} onClick={() => act(() => archiveArticle(article.id!), '已归档')}>归档</Button>
+              ),
+              <Popconfirm key="del" title="确认删除这篇文章？" onConfirm={() => act(() => deleteArticle(article.id!), '已删除')}>
+                <Button size="small" type="link" danger icon={<DeleteOutlined />}>删除</Button>
+              </Popconfirm>,
+            ].filter(Boolean) as React.ReactNode[]}
+          >
+            <List.Item.Meta
+              title={
+                <Space size={8}>
+                  <a onClick={() => navigate(ROUTES.article(article.id!))}>{article.title}</a>
+                  {article.status && (
+                    <Tag color={statusMap[article.status]?.color}>{statusMap[article.status]?.label}</Tag>
+                  )}
+                </Space>
+              }
+              description={
+                <Space size={12} style={{ fontSize: 12 }}>
+                  <span>{formatDateTime(article.createdAt)}</span>
+                  <span>点赞 {article.likeCount ?? 0}</span>
+                  <span>评论 {article.commentCount ?? 0}</span>
+                </Space>
+              }
+            />
+          </List.Item>
+        )}
+      />
+      <div style={{ textAlign: 'center', marginTop: 16 }}>
+        <Pagination current={page + 1} pageSize={articles.size} total={articles.totalElements} showSizeChanger={false} onChange={(p) => setPage(p - 1)} />
+      </div>
+    </>
+  )
+}
+
+/* ---------------- 我的收藏夹标签页 ---------------- */
+
+function MyCategoriesTab() {
+  const [form] = Form.useForm<{ name: string; description?: string }>()
+  const [list, setList] = useState<CategoryDTO[]>([])
+  const [loading, setLoading] = useState(false)
+  const [creating, setCreating] = useState(false)
+  const [searchKeyword, setSearchKeyword] = useState('')
+
+  const load = useCallback(async () => {
+    if (!searchKeyword.trim()) {
+      setList([])
+      return
+    }
+    setLoading(true)
+    try {
+      setList(await searchCategories(searchKeyword.trim()))
+    } finally {
+      setLoading(false)
+    }
+  }, [searchKeyword])
+
+  useEffect(() => { void load() }, [load])
+
+  const create = async (values: { name: string; description?: string }) => {
+    setCreating(true)
+    try {
+      const cat = await createCategory({ name: values.name, description: values.description })
+      message.success('收藏夹创建成功')
+      form.resetFields()
+      // 若当前搜索关键字命中新收藏夹，刷新列表
+      if (searchKeyword && cat.name?.toLowerCase().includes(searchKeyword.toLowerCase())) {
+        void load()
+      }
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : '创建失败')
+    } finally {
+      setCreating(false)
+    }
+  }
+
+  const remove = async (id: number) => {
+    try {
+      await deleteCategory(id)
+      message.success('收藏夹已删除')
+      void load()
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : '删除失败')
+    }
+  }
+
+  return (
+    <Row gutter={24}>
+      <Col xs={24} md={10}>
+        <Card size="small" title="新建收藏夹">
+          <Form form={form} layout="vertical" onFinish={create}>
+            <Form.Item
+              label="名称"
+              name="name"
+              rules={[
+                { required: true, message: '请输入收藏夹名称' },
+                { min: 2, max: 20, message: '名称长度 2-20 个字符' },
+              ]}
+            >
+              <Input placeholder="例如：技术笔记、生活随笔" maxLength={20} showCount />
+            </Form.Item>
+            <Form.Item label="描述" name="description">
+              <Input.TextArea rows={3} maxLength={100} showCount placeholder="描述这个收藏夹的用途（可选）" />
+            </Form.Item>
+            <Form.Item>
+              <Button type="primary" htmlType="submit" icon={<PlusOutlined />} loading={creating}>创建收藏夹</Button>
+            </Form.Item>
+          </Form>
+        </Card>
+      </Col>
+      <Col xs={24} md={14}>
+        <Card
+          size="small"
+          title="搜索收藏夹"
+          extra={
+            <Input.Search
+              placeholder="输入关键词搜索"
+              allowClear
+              style={{ width: 200 }}
+              onSearch={(v) => setSearchKeyword(v.trim())}
+            />
+          }
+        >
+          {loading ? (
+            <Skeleton active />
+          ) : list.length > 0 ? (
+            <List
+              dataSource={list}
+              renderItem={(item) => (
+                <List.Item
+                  actions={[
+                    <Popconfirm key="del" title="确认删除该收藏夹？" onConfirm={() => remove(item.id!)}>
+                      <Button size="small" type="link" danger icon={<DeleteOutlined />}>删除</Button>
+                    </Popconfirm>,
+                  ]}
+                >
+                  <List.Item.Meta
+                    title={item.name}
+                    description={item.description || '暂无描述'}
+                  />
+                </List.Item>
+              )}
+            />
+          ) : (
+            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={searchKeyword ? '未找到匹配的收藏夹' : '输入关键词搜索收藏夹'} />
+          )}
         </Card>
       </Col>
     </Row>

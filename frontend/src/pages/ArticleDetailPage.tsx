@@ -13,6 +13,7 @@ import {
   Input,
   Pagination,
   Popconfirm,
+  Popover,
   Skeleton,
   Space,
   Tag,
@@ -259,12 +260,37 @@ export default function ArticleDetailPage() {
         <Title level={2} style={{ marginBottom: 12 }}>{article.title}</Title>
         <Space size={12} wrap style={{ color: '#999', marginBottom: 16 }}>
           {article.author && (
-            <Link to={ROUTES.user(article.author.id ?? '')}>
-              <Space size={6}>
+            <Popover
+              trigger="click"
+              placement="bottomLeft"
+              content={
+                <div style={{ maxWidth: 280 }}>
+                  <Space direction="vertical" size={8} style={{ width: '100%' }}>
+                    <Space size={12}>
+                      <Avatar size={48} src={fileUrl(article.author.avatar)}>
+                        {displayName(article.author.displayName, article.author.username).slice(0, 1)}
+                      </Avatar>
+                      <div>
+                        <Text strong style={{ fontSize: 16 }}>{displayName(article.author.displayName, article.author.username)}</Text>
+                        <br />
+                        <Text type="secondary">@{article.author.username}</Text>
+                      </div>
+                    </Space>
+                    <Paragraph type="secondary" style={{ marginBottom: 0, fontSize: 13 }}>
+                      {article.author.bio || '这个人很神秘，什么都没有留下'}
+                    </Paragraph>
+                    <Link to={ROUTES.user(article.author.id ?? '')}>
+                      <Button size="small" type="primary" block>查看主页</Button>
+                    </Link>
+                  </Space>
+                </div>
+              }
+            >
+              <Space size={6} style={{ cursor: 'pointer' }}>
                 <Avatar size={22} src={fileUrl(article.author.avatar)} />
                 <Text>{displayName(article.author.displayName, article.author.username)}</Text>
               </Space>
-            </Link>
+            </Popover>
           )}
           <span>发布于 {formatDateTime(article.createdAt)}</span>
           {article.categories?.map((c) => (

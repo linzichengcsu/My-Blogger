@@ -106,10 +106,12 @@ public class ArticleSearchService {
 
         SearchResponse<ArticleDocument> response = client().search(s -> {
             s.index(indexName())
-                    .query(q -> q.multiMatch(mm -> mm
-                            .query(keyword)
-                            .fields(List.of("title^3", "summary^2", "content"))
-                            .type(TextQueryType.BestFields)))
+                    .query(q -> q.bool(b -> b
+                            .must(mq -> mq.multiMatch(mm -> mm
+                                    .query(keyword)
+                                    .fields(List.of("title^3", "summary^2", "content"))
+                                    .type(TextQueryType.BestFields)))
+                            .filter(fq -> fq.term(t -> t.field("status").value("RELEASE")))))
                     .from(from)
                     .size(size)
                     .highlight(h -> h
@@ -161,10 +163,11 @@ public class ArticleSearchService {
     }
 
     /**
-     * 降级搜索：JPA LIKE（仅标题），与原实现一致。
+     * 降级搜索：JPA LIKE（仅标题），仅返回已发布文章。
      */
     private PageResponseDTO<ArticleListItemDTO> searchByJpa(String keyword, Pageable pageable) {
-        Page<Article> articlePage = articleRepository.findByTitleContaining(keyword, pageable);
+        Page<Article> articlePage = articleRepository.findByTitleContainingAndStatus(
+                keyword, Article.ArticleStatus.RELEASE, pageable);
         return articleListAssembler.buildPageResponse(articlePage);
     }
 

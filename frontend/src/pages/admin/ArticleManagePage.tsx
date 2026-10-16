@@ -28,9 +28,8 @@ import {
   batchDeleteArticles,
   batchPublishArticles,
   deleteArticle,
-  getArticleList,
+  getManageArticles,
   publishArticle,
-  searchArticles,
 } from '@/api'
 import { ApiError } from '@/api/request'
 import type { ArticleListItemDTO, PageResponse } from '@/types'
@@ -50,8 +49,8 @@ export default function ArticleManagePage() {
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const query = { page, size: 10, sortBy: 'createdAt', sortDirection: 'desc' as const }
-      setData(keyword ? await searchArticles(keyword, query) : await getArticleList(query))
+      const query = { page, size: 10, sortBy: 'createdAt', sortDirection: 'desc' as const, keyword: keyword || undefined }
+      setData(await getManageArticles(query))
     } finally {
       setLoading(false)
     }

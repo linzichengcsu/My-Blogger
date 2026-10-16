@@ -95,6 +95,28 @@ public interface ArticleRepository extends BaseRepository<Article, Long> {
     @Query(value = "SELECT a FROM Article a", countQuery = "SELECT COUNT(a) FROM Article a")
     Page<Article> findAllWithAuthor(Pageable pageable);
 
+    // 分页查询指定状态的文章并预加载作者（公开列表页只显示已发布）
+    @EntityGraph(attributePaths = "author")
+    @Query(value = "SELECT a FROM Article a WHERE a.status = :status",
+            countQuery = "SELECT COUNT(a) FROM Article a WHERE a.status = :status")
+    Page<Article> findAllByStatusWithAuthor(@Param("status") Article.ArticleStatus status, Pageable pageable);
+
+    // 分页查询指定作者的文章并按状态过滤（个人中心查看全部 / 公开主页只显示已发布）
+    @EntityGraph(attributePaths = "author")
+    @Query(value = "SELECT a FROM Article a WHERE a.author = :author AND (:status IS NULL OR a.status = :status)",
+            countQuery = "SELECT COUNT(a) FROM Article a WHERE a.author = :author AND (:status IS NULL OR a.status = :status)")
+    Page<Article> findByAuthorAndStatus(@Param("author") User author,
+                                        @Param("status") Article.ArticleStatus status,
+                                        Pageable pageable);
+
+    // 标题模糊搜索并按状态过滤（ES 降级 / 管理端搜索）
+    @EntityGraph(attributePaths = "author")
+    @Query(value = "SELECT a FROM Article a WHERE a.title LIKE %:keyword% AND (:status IS NULL OR a.status = :status)",
+            countQuery = "SELECT COUNT(a) FROM Article a WHERE a.title LIKE %:keyword% AND (:status IS NULL OR a.status = :status)")
+    Page<Article> findByTitleContainingAndStatus(@Param("keyword") String keyword,
+                                                 @Param("status") Article.ArticleStatus status,
+                                                 Pageable pageable);
+
     // 查询文章详情并预加载作者与分类（无分页，可安全 fetch to-many）
     @EntityGraph(attributePaths = {"author", "categories"})
     @Query("SELECT a FROM Article a WHERE a.id = :id")

@@ -6,10 +6,10 @@ import { useState } from 'react'
 import { BookOutlined, LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
 import { Button, Card, Form, Input, message, Typography } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { register } from '@/api'
+import { forgotPassword, register } from '@/api'
 import { ApiError } from '@/api/request'
 import { useAuth } from '@/context/AuthContext'
-import type { UserLoginRequest, UserRegisterRequest } from '@/types'
+import type { UserLoginRequest, UserPasswordResetRequest, UserRegisterRequest } from '@/types'
 import { ROUTES } from '@/constants/routes'
 
 const { Title, Text } = Typography
@@ -62,7 +62,16 @@ export function LoginPage() {
   }
 
   return (
-    <AuthCard title="欢迎回来" footer={<Text type="secondary">还没有账号？<Link to={ROUTES.register}>立即注册</Link></Text>}>
+    <AuthCard
+      title="欢迎回来"
+      footer={
+        <Text type="secondary">
+          还没有账号？<Link to={ROUTES.register}>立即注册</Link>
+          <span style={{ margin: '0 8px' }}>·</span>
+          <Link to={ROUTES.forgotPassword}>忘记密码</Link>
+        </Text>
+      }
+    >
       <Form size="large" onFinish={onFinish} autoComplete="off">
         <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
           <Input prefix={<UserOutlined />} placeholder="用户名" />
@@ -72,6 +81,56 @@ export function LoginPage() {
         </Form.Item>
         <Button type="primary" htmlType="submit" block loading={loading}>
           登录
+        </Button>
+      </Form>
+    </AuthCard>
+  )
+}
+
+export function ForgotPasswordPage() {
+  const navigate = useNavigate()
+  const [form] = Form.useForm<UserPasswordResetRequest & { confirmPassword: string }>()
+  const [loading, setLoading] = useState(false)
+
+  const onFinish = async (values: UserPasswordResetRequest) => {
+    setLoading(true)
+    try {
+      await forgotPassword(values)
+      message.success('密码重置成功，请使用新密码登录')
+      navigate(ROUTES.login, { replace: true })
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : '重置失败，请重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <AuthCard title="忘记密码" footer={<Text type="secondary">想起来了？<Link to={ROUTES.login}>去登录</Link></Text>}>
+      <Form form={form} size="large" onFinish={onFinish} autoComplete="off">
+        <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+          <Input prefix={<UserOutlined />} placeholder="用户名" />
+        </Form.Item>
+        <Form.Item name="email" rules={[{ required: true, message: '请输入注册邮箱' }, { type: 'email', message: '邮箱格式不正确' }]}>
+          <Input prefix={<MailOutlined />} placeholder="注册时使用的邮箱" />
+        </Form.Item>
+        <Form.Item name="newPassword" rules={passwordRules} hasFeedback>
+          <Input.Password prefix={<LockOutlined />} placeholder="新密码（8-20 位，含大小写/数字/特殊字符）" />
+        </Form.Item>
+        <Form.Item
+          name="confirmPassword"
+          dependencies={['newPassword']}
+          rules={[
+            { required: true, message: '请再次输入新密码' },
+            ({ getFieldValue }) => ({
+              validator: (_, value) => (value === getFieldValue('newPassword') ? Promise.resolve() : Promise.reject(new Error('两次输入的密码不一致'))),
+            }),
+          ]}
+        >
+          <Input.Password prefix={<LockOutlined />} placeholder="确认新密码" />
+        </Form.Item>
+        <Button type="primary" htmlType="submit" block loading={loading}>
+          重置密码
         </Button>
       </Form>
     </AuthCard>
