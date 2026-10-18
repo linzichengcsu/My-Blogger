@@ -6,27 +6,13 @@
 ## 目录结构
 
 ```
-frontend/
-├── src/
-│   ├── api/                  # API 客户端（统一从 request.ts 复用 axios 实例）
-│   │   ├── request.ts        # axios 实例 + Result 解包 + Token 注入 + 401 静默刷新
-│   │   ├── auth.ts           # 登录 / 注册 / 刷新 / 登出
-│   │   ├── user.ts           # 用户管理（me / CRUD / 状态 / 统计 / 搜索）
-│   │   ├── article.ts        # 文章管理（CRUD / 发布归档 / 点赞浏览 / 批量 / 搜索）
-│   │   ├── category.ts       # 分类管理（CRUD / 树与层级 / 统计 / 搜索）
-│   │   ├── comment.ts        # 评论管理（CRUD / 回复 / 统计 / 批量审核）
-│   │   ├── file.ts           # 文件管理（上传 / 下载 / Base64）
-│   │   ├── admin.ts          # 管理后台（看板统计）
-│   │   └── index.ts          # 统一出口
-│   └── types/                # 共享类型（与 openapi schemas 一一对应）
-│       ├── common.ts         # Result<T> / PageResponse<T> / PageQuery / BatchIdRequest
-│       ├── user.ts           # UserDetailDTO / UserProfileDTO / 登录注册请求等
-│       ├── article.ts        # ArticleDetailDTO / ArticleListItemDTO / 创建更新请求
-│       ├── category.ts       # CategoryDTO / CategoryTreeDTO / CategoryStatDTO
-│       ├── comment.ts        # CommentDTO / CommentReplyDTO / 审核请求
-│       ├── file.ts           # FileUploadResponse / Base64UploadRequest
-│       ├── dashboard.ts      # DashboardStatsDTO 及子统计
-│       └── index.ts          # 统一出口
+frontend/src\
+├── api/                      # 与后端的数据接口层
+├── components/               # 通用UI组件层
+├── constants/                # 全站路由路径常量
+├── context/                  # 登录态上下文
+├── pages/                    # 页面布局
+├── types/                    # 基本数据结构
 ├── vite.config.ts            # 开发代理 /api → http://localhost:8080，并配置 '@' 别名
 ├── tsconfig.json             # 严格模式 + '@/*' 路径映射
 └── package.json

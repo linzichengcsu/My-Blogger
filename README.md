@@ -6,12 +6,13 @@
 [![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
 [![Redis](https://img.shields.io/badge/Redis-7.0-%23ea527f)](https://redis.io/)
+[![ElasticSearch](https://img.shields.io/badge/ElasticSearch-9.4.5-%230057b7)](https://www.elastic.co/cn/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 18.2.0** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
 
-> **当前进度**：前端开发完成，正在开发环境全量试运行阶段
-> **下一步开发规划**：完成生产环境部署，优化系统性能与可扩展性，增加更多功能模块。
+> **当前进度**：进行生产环境部署，将Redis和ElasticSearch以低耦合、可降级方式集成到业务逻辑中。
+> **下一步开发规划**：考察微博、CSDN、掘金等博客类平台的功能，前后端同步调整代码。
 
 ---
 
@@ -23,7 +24,8 @@
 - [配置说明](#配置说明)
 - [API 文档](#api-文档)
 - [测试](#测试)
-- [项目结构](#项目结构)
+- [后端结构](#后端结构)
+- [前端结构](#前端结构)
 - [生产部署要点](#生产部署要点)
 - [开发日志](#开发日志)
 - [已知问题及解决规划](#已知问题及解决规划)
@@ -53,6 +55,7 @@
 **系统能力**
 
 - [x] Spring Cache + Redis 缓存，可开关（`app.cache.enabled`）
+- [x] 业务逻辑方法与中间件实现解耦合，可实现中间件故障时的降级处理
 - [x] 文件上传（本地磁盘存储）+ Base64 互转接口，类型白名单校验
 - [x] AOP 统一请求日志 + SQL 参数绑定打印 + 敏感字段脱敏
 - [x] Flyway 数据库迁移（生产环境）、HikariCP 连接池调优
@@ -63,15 +66,17 @@
 
 ## 🛠 技术栈
 
-| 类别 | 技术                                           |
-|---|----------------------------------------------|
-| 语言 / 框架 | Java 23、Spring Boot 4.1.1                    |
-| 持久层 | Spring Data JPA (Hibernate 6)、Flyway         |
-| 数据库 | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）         |
-| 安全 | Spring Security、JJWT 0.12.3、BCrypt           |
-| 接口文档 | springdoc-openapi 2.5.0（Swagger UI）          |
-| 前端模板 | React + TypeScript + Vite                    |
-| 其他 | Lombok、AOP、Actuator、CommonMark、commons-lang3 |
+| 类别      | 技术                                                             |
+|---------|----------------------------------------------------------------|
+| 语言 / 框架 | Java 23、Spring Boot 4.1.1                                      |
+| 持久层     | Spring Data JPA (Hibernate 6)、Flyway                           |
+| 数据库     | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）                           |
+| 安全      | Spring Security、JJWT 0.12.3、BCrypt                             |
+| 中间件     | Flyway、HikariCP、Actuator、Prometheus、ElasticSearch              |
+| 接口文档    | springdoc-openapi 2.5.0（Swagger UI）                            |
+| 前端模板    | React + TypeScript + Vite                                      |
+| 其他      | Lombok、AOP、Actuator、CommonMark、commons-lang3                   |
+| 测试      | JUnit 5、Mockito、AssertJ、Spring Boot Test、Testcontainers、Docker |
 
 ---
 
@@ -88,6 +93,8 @@
 | Node.js | 18.0+ |
 | pnpm    | 7.0+ |
 | React   | 18.2.0 |
+| ElasticSearch | 9.4.5 |
+
 
 ### 1. 克隆项目
 ```bash
@@ -118,6 +125,8 @@ mvn spring-boot:run
 ```bash
 cd frontend
 pnpm install
+pnpm run typecheck
+pnpm run build
 pnpm run dev
 ```
 
@@ -129,6 +138,16 @@ pnpm run dev
 | `http://localhost:8080/v3/api-docs` | OpenAPI JSON           |
 | `http://localhost:8080/actuator/health` | 健康检查                   |
 | `openapi.yaml` | 项目根目录离线 API 文档（将会定期同步） |
+
+### 7. 补充：Docker启动（如需在本地建镜像、跑容器、做压测）
+```bash
+cd deploy
+docker compose build
+docker compose up -d
+docker compose ps
+docker compose logs -f --tail 30
+docker compose down
+```
 
 ---
 
@@ -206,7 +225,8 @@ mvn -Dtest=ApiIntegrationTest test
 
 ---
 
-## 📂 项目结构
+## 📂 后端结构
+```
 src/main/java/csulzc/My_Personal_Blogger\
 ├── api/ # DTO（article/category/comment/user/dashboard）+ 统一响应与全局异常\
 ├── aspect/ # AOP 请求日志切面（含敏感脱敏） \
@@ -214,8 +234,24 @@ src/main/java/csulzc/My_Personal_Blogger\
 ├── controller/ # REST 控制器（users/articles/categories/comments/files/admin） \
 ├── domain/entity/ # JPA 实体（User/Article/Category/Comment/Admin + BaseEntity）\
 ├── repository/ # Spring Data JPA 仓储层 \
+├── search/ # ElasticSearch 索引层 \
 ├── security/ # JWT 过滤器与令牌、密码校验、来源解析、安全上下文工具 \
 └── service/ # 业务逻辑层
+```
+
+## 📂 前端结构
+```
+frontend/src\
+├── api/                      # 与后端的数据接口层
+├── components/               # 通用UI组件层
+├── constants/                # 全站路由路径常量
+├── context/                  # 登录态上下文
+├── pages/                    # 页面布局
+├── types/                    # 基本数据结构
+├── vite.config.ts            # 开发代理 /api → http://localhost:8080，并配置 '@' 别名
+├── tsconfig.json             # 严格模式 + '@/*' 路径映射
+└── package.json
+```
 
 ## 🚢 生产部署要点
 
@@ -233,7 +269,7 @@ src/main/java/csulzc/My_Personal_Blogger\
 - 3月16日：Repository 层完成并测试通过
 - 3月21日：DTO 模块完成
 - 3月23日：引入 Qoder AI 辅助编程
-- 3月28日：Service 层初步编码完成
+- 3月28日：Service 层初步编码完成，采取了与Redis、ElasticSearch等中间件解耦合的设计策略
 - 4月5日：Service 层全部测试通过
 - 4月19日：RESTful API 与计算机网络基础学习、Controller 层开发完成并测试通过
 - 4月29日：部署 MySQL、JWT、OpenAPI 组件，引入文件系统，后端功能初步完善
@@ -250,6 +286,7 @@ src/main/java/csulzc/My_Personal_Blogger\
 - 9月20日：Spring Boot大版本更新到4.1.1
 - 9月22日：在GitHub Action中添加基于前后端自动化测试的CI流水线
 - 10月10日：进行了全面的慢SQL排查与优化，系统响应速度提升明显
+- 10月15日：完成了项目主体的Docker镜像部署和容器化，确保了项目的一致性和可移植性
 
 ## 🐞 已知问题及解决规划
 
@@ -269,5 +306,6 @@ src/main/java/csulzc/My_Personal_Blogger\
 
 [MIT](LICENSE)
 
-## 鸣谢
+## 声明
 - 部分Agent Skill脚本来自知名开源库[InterviewGuide](https://github.com/Snailclimb/interview-guide)
+- 前端Component层使用了Ant Design等成熟的开源设计
