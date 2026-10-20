@@ -10,6 +10,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Component;
@@ -28,6 +29,7 @@ import java.util.regex.Pattern;
 @Aspect
 @Component
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "app.aspect.request-log.enabled", havingValue = "true", matchIfMissing = true)
 public class RequestLogAspect {
 
     private static final int MAX_PARAM_LENGTH = 500;

@@ -1,0 +1,141 @@
+# ============================================================
+# 压测专用 profile（loadtest）
+#
+# 与 dev / prod 完全隔离：独立数据库、独立 Redis 库、独立 ES 索引与上传目录。
+# 三条设计原则：
+#   1. 缓存必须开启 —— 否则测不到任何缓存行为（dev 默认 app.cache.enabled=false，不可用于压测）
+#   2. 干扰必须压低 —— 关 SQL 打印、关 Hibernate 统计、关请求日志切面、关 Swagger
+#   3. 观测必须打开 —— 暴露 metrics / prometheus 端点，Redis 健康检查可用
+#
+# 启动方式二选一（详见 docs/loadtest-plan.md）：
+#   A. 仅中间件跑容器，应用跑宿主机（推荐，便于 async-profiler / JFR 剖析）
+#      mvn spring-boot:run -Dspring-boot.run.profiles=loadtest
+#   B. 整个栈跑容器
+#      docker compose -f deploy/docker-compose.loadtest.yml --profile app up -d
+# ============================================================
+
+spring:
+  datasource:
+    # 默认指向 loadtest 容器的映射端口（13306），避免与宿主机的 dev MySQL(3306) 冲突
+    url: jdbc:mysql://${LOADTEST_DB_HOST:127.0.0.1}:${LOADTEST_DB_PORT:13306}/csulzc_blogdb_loadtest?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&connectTimeout=5000&socketTimeout=30000
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    username: ${LOADTEST_DB_USERNAME:blog_lt}
+    password: ${LOADTEST_DB_PASSWORD:loadtest-db-pwd}
+    hikari:
+      maximum-pool-size: 20          # 与 prod 一致，压测结论才可迁移
+      minimum-idle: 5
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      connection-test-query: SELECT 1
+      pool-name: LoadTestHikariCP
+      leak-detection-threshold: 60000
+  jpa:
+    hibernate:
+      ddl-auto: validate             # 表结构由 Flyway 负责
+    show-sql: false                  # 降噪 1：关闭 SQL 打印
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: false
+        generate_statistics: false   # 降噪 2：关闭统计收集（本身有运行时开销）
+        jdbc:
+          batch_size: 30
+          batch_versioned_data: true
+        order_inserts: true
+        order_updates: true
+  flyway:
+    enabled: true                    # 压测库结构由 Flyway 生成，与 prod 一致
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    baseline-version: 0
+    out-of-order: false
+    validate-on-migrate: true
+  data:
+    redis:
+      # 默认指向 loadtest 容器的映射端口（16379），避免与宿主机的 dev Redis(6379) 冲突
+      host: ${LOADTEST_REDIS_HOST:127.0.0.1}
+      port: ${LOADTEST_REDIS_PORT:16379}
+      password: ${LOADTEST_REDIS_PASSWORD:loadtest-redis-pwd}
+      database: 0
+      timeout: 3s
+      lettuce:
+        pool:
+          max-active: 20
+          max-idle: 10
+          min-idle: 2
+          max-wait: 3s
+  elasticsearch:
+    uris: ${LOADTEST_ES_URIS:http://127.0.0.1:19200}
+    connection-timeout: 3s
+    socket-timeout: 10s
+
+app:
+  cache:
+    enabled: true                   # 压测必须开缓存
+  search:
+    elasticsearch:
+      enabled: true
+      auto-create-index: true
+      # 每次启动全量重建索引：压测环境是一次性的，保证 ES 与种子数据始终一致
+      reindex-on-startup: ${LOADTEST_REINDEX_ON_STARTUP:true}
+      index-name: articles
+      reindex-batch-size: 500
+  aspect:
+    request-log:
+      enabled: false                # 降噪 3：关闭 AOP 请求日志（每请求 JSON 序列化开销大）
+  loadtest:
+    seed:
+      enabled: true                 # 自动灌入压测种子数据（仅 loadtest profile 生效）
+      article-count: 1000
+
+jwt:
+  secret: ${LOADTEST_JWT_SECRET:loadtest-only-jwt-secret-not-for-production-use-please-change}
+  expiration: 86400000
+  refresh-expiration: 604800000
+  token-prefix: "Bearer "
+  header: Authorization
+
+file:
+  upload-dir: uploads-loadtest       # 与 dev/prod 的上传目录隔离
+  max-file-size: 5242880
+  allowed-file-types:
+    - image/jpeg
+    - image/png
+    - image/gif
+    - image/webp
+
+springdoc:
+  api-docs:
+    enabled: false                     # 降噪 4：压测不需要 Swagger，关闭其扫描与端点
+  swagger-ui:
+    enabled: false
+
+logging:
+  level:
+    root: WARN
+    org.hibernate: WARN
+    org.hibernate.SQL: WARN
+    org.hibernate.orm.jdbc.bind: WARN
+    org.springframework: WARN
+    com.zaxxer.hikari: WARN
+    csulzc.My_Personal_Blogger: INFO   # 业务日志保留 INFO，便于观察降级/熔断告警
+  pattern:
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{20} - %msg%n"
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus   # 压测观测通道
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    enable:
+      all: true
+  health:
+    redis:
+      enabled: true                      # dev 默认关闭，压测必须能看到 Redis 健康状态
+    elasticsearch:
+      enabled: true

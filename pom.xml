@@ -87,6 +87,12 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!-- 压测观测：暴露 /actuator/prometheus，供 Prometheus + Grafana 采集；
+             未引入该注册表时只有 /actuator/metrics，无法被 Prometheus 抓取 -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
 
 		<!-- 安全框架 -->
 		<dependency>
