@@ -189,7 +189,7 @@ public class ArticleService {
     /**
      * 根据 ID 获取文章详情
      */
-    @Cacheable(cacheNames = "article:detail", key = "#articleId")
+    @Cacheable(cacheNames = "article:detail", key = "#articleId", sync = true)
     public ArticleDetailDTO getArticleById(Long articleId) {
         Article article = articleRepository.findDetailById(articleId)
                 .orElseThrow(() -> new EntityNotFoundException("文章不存在"));
@@ -200,7 +200,7 @@ public class ArticleService {
     /**
      * 获取文章列表（分页，公开列表只返回已发布文章）
      */
-    @Cacheable(cacheNames = "article:list", key = "#pageable")
+    @Cacheable(cacheNames = "article:list", key = "#pageable", sync = true)
     public PageResponseDTO<ArticleListItemDTO> getArticleList(Pageable pageable) {
         Page<Article> articlePage = articleRepository.findAllByStatusWithAuthor(Article.ArticleStatus.RELEASE, pageable);
         return articleListAssembler.buildPageResponse(articlePage);
@@ -212,7 +212,8 @@ public class ArticleService {
      * 缓存 key 包含可见性标识，避免不同身份串数据。
      */
     @Cacheable(cacheNames = "article:list",
-            key = "#author.id + ':' + #pageable + ':' + @securityContextUtil.canViewAllStatuses(#author.id)")
+            key = "#author.id + ':' + #pageable + ':' + @securityContextUtil.canViewAllStatuses(#author.id)",
+            sync = true)
     public PageResponseDTO<ArticleListItemDTO> getArticlesByAuthor(User author, Pageable pageable) {
         boolean viewAll = securityContextUtil.canViewAllStatuses(author.getId());
         Page<Article> articlePage = viewAll

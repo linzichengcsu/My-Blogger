@@ -164,7 +164,7 @@ public class CategoryService {
     /**
      * 根据 ID 获取收藏夹详情
      */
-    @Cacheable(cacheNames = "category:detail", key = "#categoryId")
+    @Cacheable(cacheNames = "category:detail", key = "#categoryId", sync = true)
     public CategoryDTO getCategoryById(Long categoryId) {
         CategoryContext ctx = loadContext();
         Category category = ctx.categoriesById().get(categoryId);
@@ -177,7 +177,7 @@ public class CategoryService {
     /**
      * 根据名称获取收藏夹
      */
-    @Cacheable(cacheNames = "category:detail", key = "#name")
+    @Cacheable(cacheNames = "category:detail", key = "#name", sync = true)
     public CategoryDTO getCategoryByName(String name) {
         Category category = categoryRepository.findByName(name)
                 .orElseThrow(() -> new EntityNotFoundException("收藏夹不存在"));
@@ -187,7 +187,7 @@ public class CategoryService {
     /**
      * 获取所有顶级收藏夹（没有父收藏夹的收藏夹）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryDTO> getAllTopLevelCategories() {
         CategoryContext ctx = loadContext();
         return ctx.categoriesById().values().stream()
@@ -199,7 +199,7 @@ public class CategoryService {
     /**
      * 获取某个收藏夹的所有子收藏夹
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryDTO> getSubCategories(Long parentCategoryId) {
         CategoryContext ctx = loadContext();
         if (!ctx.categoriesById().containsKey(parentCategoryId)) {
@@ -213,7 +213,7 @@ public class CategoryService {
     /**
      * 分页查询所有收藏夹
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public PageResponseDTO<CategoryDTO> getAllCategories(int page, int size, String sortBy) {
         Pageable pageable = PageRequest.of(page, size, safeSort(sortBy));
         Page<Category> categoryPage = categoryRepository.findAll(pageable);
@@ -240,7 +240,7 @@ public class CategoryService {
     /**
      * 构建收藏夹树（用于前端下拉树形选择器）
      */
-    @Cacheable(cacheNames = "category:tree")
+    @Cacheable(cacheNames = "category:tree", sync = true)
     public List<CategoryTreeDTO> buildCategoryTree() {
         CategoryContext ctx = loadContext();
 
@@ -339,7 +339,7 @@ public class CategoryService {
     /**
      * 获取收藏夹的完整路径（从根到当前收藏夹）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryDTO> getCategoryPath(Long categoryId) {
         CategoryContext ctx = loadContext();
         if (!ctx.categoriesById().containsKey(categoryId)) {
@@ -365,7 +365,7 @@ public class CategoryService {
     /**
      * 获取所有收藏夹及其文章数量
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryStatDTO> getCategoryStatistics() {
         List<Object[]> results = categoryRepository.findAllWithArticleCount();
 
@@ -387,7 +387,7 @@ public class CategoryService {
     /**
      * 计算收藏夹的文章数量（包含子收藏夹的文章）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public long countArticlesInCategoryIncludingSubCategories(Long categoryId) {
         CategoryContext ctx = loadContext();
         Category category = ctx.categoriesById().get(categoryId);
@@ -413,7 +413,7 @@ public class CategoryService {
     /**
      * 获取收藏夹的文章占比统计
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryStatDTO> getCategoryPercentageStats() {
         List<CategoryStatDTO> stats = getCategoryStatistics();
 
@@ -518,7 +518,7 @@ public class CategoryService {
     /**
      * 搜索收藏夹（根据名称或描述，数据库模糊查询，避免全表加载后在内存过滤）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryDTO> searchCategories(String keyword) {
         if (!StringUtils.hasText(keyword)) {
             return new ArrayList<>();
@@ -533,7 +533,7 @@ public class CategoryService {
     /**
      * 获取有文章的收藏夹列表（SQL JOIN 过滤，避免全表加载后在内存判断）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public List<CategoryDTO> getCategoriesWithArticles() {
         CategoryContext ctx = loadContext();
         return categoryRepository.findWithArticles().stream()
@@ -602,7 +602,7 @@ public class CategoryService {
     /**
      * 检查收藏夹名称是否存在（排除指定 ID）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public boolean existsByName(String name, Long excludeId) {
         return categoryRepository.findByName(name)
                 .filter(c -> !c.getId().equals(excludeId))
@@ -612,7 +612,7 @@ public class CategoryService {
     /**
      * 检查收藏夹名称是否存在
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public boolean existsByName(String name) {
         return categoryRepository.findByName(name).isPresent();
     }
@@ -620,7 +620,7 @@ public class CategoryService {
     /**
      * 获取收藏夹总数
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public long getTotalCategoryCount() {
         return categoryRepository.count();
     }
@@ -628,7 +628,7 @@ public class CategoryService {
     /**
      * 获取顶级收藏夹数量（SQL count，避免加载全部顶级收藏夹实体）
      */
-    @Cacheable(cacheNames = "category:list")
+    @Cacheable(cacheNames = "category:list", sync = true)
     public long getTopLevelCategoryCount() {
         return categoryRepository.countByParentCategoryIsNull();
     }

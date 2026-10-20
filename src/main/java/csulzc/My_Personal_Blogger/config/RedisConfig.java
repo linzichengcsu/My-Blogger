@@ -6,8 +6,10 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.cache.BatchStrategies;
 import org.springframework.data.redis.cache.RedisCacheConfiguration;
 import org.springframework.data.redis.cache.RedisCacheManager;
+import org.springframework.data.redis.cache.RedisCacheWriter;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.data.redis.serializer.GenericJacksonJsonRedisSerializer;
@@ -47,7 +49,15 @@ public class RedisConfig {
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer()))
                 .disableCachingNullValues();
 
-        return RedisCacheManager.builder(factory)
+        // 防击穿：带锁 CacheWriter 是 @Cacheable(sync=true) 生效的前提（sync 的互斥由 writer 实现）。
+        // 回源时对 <cacheName>~lock 执行 SET NX 取锁 + 锁内双检，未抢到锁的线程按 50ms 轮询等待；
+        // 锁 TTL 10s：防止持锁线程崩溃后锁永不释放导致后续回源全部阻塞（默认持久锁存在该死锁风险）。
+        RedisCacheWriter cacheWriter = RedisCacheWriter.lockingRedisCacheWriter(factory,
+                Duration.ofMillis(50),
+                RedisCacheWriter.TtlFunction.just(Duration.ofSeconds(10)),
+                BatchStrategies.keys());
+
+        return RedisCacheManager.builder(cacheWriter)
                 .cacheDefaults(defaultConfig)
                 .withCacheConfiguration("category:list",
                         defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofHours(1), TTL_JITTER)))
