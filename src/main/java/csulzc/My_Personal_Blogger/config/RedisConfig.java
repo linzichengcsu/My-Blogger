@@ -33,10 +33,16 @@ public class RedisConfig {
         return template;
     }
 
+    /**
+     * 缓存 TTL 抖动比例：±15%。
+     * 同一批写入的 key 过期时间会均匀散布在 [TTL×0.85, TTL×1.15] 区间，防止集中穿透引发雪崩。
+     */
+    private static final double TTL_JITTER = 0.15;
+
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory factory) {
         RedisCacheConfiguration defaultConfig = RedisCacheConfiguration.defaultCacheConfig()
-                .entryTtl(Duration.ofMinutes(30))
+                .entryTtl(new JitteredTtlFunction(Duration.ofMinutes(30), TTL_JITTER))
                 .serializeKeysWith(RedisSerializationContext.SerializationPair.fromSerializer(RedisSerializer.string()))
                 .serializeValuesWith(RedisSerializationContext.SerializationPair.fromSerializer(jsonSerializer()))
                 .disableCachingNullValues();
@@ -44,11 +50,11 @@ public class RedisConfig {
         return RedisCacheManager.builder(factory)
                 .cacheDefaults(defaultConfig)
                 .withCacheConfiguration("category:list",
-                        defaultConfig.entryTtl(Duration.ofHours(1)))
+                        defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofHours(1), TTL_JITTER)))
                 .withCacheConfiguration("category:tree",
-                        defaultConfig.entryTtl(Duration.ofHours(1)))
+                        defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofHours(1), TTL_JITTER)))
                 .withCacheConfiguration("category:stats",
-                        defaultConfig.entryTtl(Duration.ofMinutes(10)))
+                        defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofMinutes(10), TTL_JITTER)))
                 .build();
     }
 
