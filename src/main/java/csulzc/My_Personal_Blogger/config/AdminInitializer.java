@@ -1,6 +1,7 @@
 package csulzc.My_Personal_Blogger.config;
 
 import csulzc.My_Personal_Blogger.domain.entity.User;
+import csulzc.My_Personal_Blogger.repository.CategoryRepository;
 import csulzc.My_Personal_Blogger.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -17,15 +18,18 @@ import java.util.Base64;
 public class AdminInitializer implements CommandLineRunner {
 
     private final UserRepository userRepository;
+    private final CategoryRepository categoryRepository;
     private final PasswordEncoder passwordEncoder;
 
     private static final SecureRandom secureRandom = new SecureRandom();
 
     @Override
     public void run(String... args) {
-        if (!userRepository.existsByUsername("admin")) {
+        User admin = userRepository.findByUsername("admin").orElse(null);
+
+        if (admin == null) {
             String randomPassword = generateSecurePassword();
-            User admin = User.builder()
+            admin = User.builder()
                     .username("admin")
                     .email("admin@example.com")
                     .passwordHash(passwordEncoder.encode(randomPassword))
@@ -46,6 +50,12 @@ public class AdminInitializer implements CommandLineRunner {
             System.out.println("用户名: admin");
             System.out.println("密码: " + randomPassword);
             System.out.println("⚠️  请登录后立即修改密码！");
+        }
+
+        // 兼容历史数据：将未记录创建者的收藏夹归属给管理员（不影响已有归属的数据）
+        int migrated = categoryRepository.assignOwnerToUnowned(admin.getId());
+        if (migrated > 0) {
+            log.info("已为 {} 个历史收藏夹补记创建者（admin）", migrated);
         }
     }
 

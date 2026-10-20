@@ -43,9 +43,9 @@ import {
   deleteArticle,
   deleteCategory,
   getArticlesByAuthor,
+  getMyCategories,
   getUserProfile,
   publishArticle,
-  searchCategories,
   updateMyInfo,
   uploadFile,
 } from '@/api'
@@ -391,35 +391,37 @@ function MyArticlesTab({ userId, navigate }: { userId: number; navigate: ReturnT
 function MyCategoriesTab() {
   const [form] = Form.useForm<{ name: string; description?: string }>()
   const [list, setList] = useState<CategoryDTO[]>([])
-  const [loading, setLoading] = useState(false)
+  const [loading, setLoading] = useState(true)
   const [creating, setCreating] = useState(false)
   const [searchKeyword, setSearchKeyword] = useState('')
 
+  // 进入页面即加载本人创建的收藏夹，无需先搜索关键词
   const load = useCallback(async () => {
-    if (!searchKeyword.trim()) {
-      setList([])
-      return
-    }
     setLoading(true)
     try {
-      setList(await searchCategories(searchKeyword.trim()))
+      setList(await getMyCategories())
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : '收藏夹加载失败')
     } finally {
       setLoading(false)
     }
-  }, [searchKeyword])
+  }, [])
 
   useEffect(() => { void load() }, [load])
+
+  // 搜索框仅在本人收藏夹范围内做客户端过滤，默认展示全部
+  const keyword = searchKeyword.trim().toLowerCase()
+  const filtered = keyword
+    ? list.filter((c) => c.name?.toLowerCase().includes(keyword) || c.description?.toLowerCase().includes(keyword))
+    : list
 
   const create = async (values: { name: string; description?: string }) => {
     setCreating(true)
     try {
-      const cat = await createCategory({ name: values.name, description: values.description })
+      await createCategory({ name: values.name, description: values.description })
       message.success('收藏夹创建成功')
       form.resetFields()
-      // 若当前搜索关键字命中新收藏夹，刷新列表
-      if (searchKeyword && cat.name?.toLowerCase().includes(searchKeyword.toLowerCase())) {
-        void load()
-      }
+      void load()
     } catch (err) {
       message.error(err instanceof ApiError ? err.message : '创建失败')
     } finally {
@@ -476,9 +478,9 @@ function MyCategoriesTab() {
         >
           {loading ? (
             <Skeleton active />
-          ) : list.length > 0 ? (
+          ) : filtered.length > 0 ? (
             <List
-              dataSource={list}
+              dataSource={filtered}
               renderItem={(item) => (
                 <List.Item
                   actions={[
@@ -495,7 +497,10 @@ function MyCategoriesTab() {
               )}
             />
           ) : (
-            <Empty image={Empty.PRESENTED_IMAGE_SIMPLE} description={searchKeyword ? '未找到匹配的收藏夹' : '输入关键词搜索收藏夹'} />
+            <Empty
+              image={Empty.PRESENTED_IMAGE_SIMPLE}
+              description={list.length > 0 ? '未找到匹配的收藏夹' : '还没有收藏夹，先在左侧创建一个吧'}
+            />
           )}
         </Card>
       </Col>

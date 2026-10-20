@@ -77,6 +77,16 @@ export function buildCategoryTree(): Promise<CategoryTreeDTO[]> {
   return http.get<CategoryTreeDTO[]>('/categories/tree')
 }
 
+/** 获取当前登录用户创建的收藏夹（需登录，按创建者隔离） */
+export function getMyCategories(): Promise<CategoryDTO[]> {
+  return http.get<CategoryDTO[]>('/categories/my')
+}
+
+/** 获取当前登录用户创建的收藏夹树（需登录，用于写文章下拉选择器） */
+export function buildMyCategoryTree(): Promise<CategoryTreeDTO[]> {
+  return http.get<CategoryTreeDTO[]>('/categories/my/tree')
+}
+
 /** 获取有文章的收藏夹（需管理员） */
 export function getCategoriesWithArticles(): Promise<CategoryDTO[]> {
   return http.get<CategoryDTO[]>('/categories/with-articles')

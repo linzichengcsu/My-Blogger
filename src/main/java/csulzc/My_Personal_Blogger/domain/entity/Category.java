@@ -39,5 +39,10 @@ public class Category extends BaseEntity {
     @ToString.Exclude
     private List<Category> subCategories = new ArrayList<>();
 
+    // 3. 多对一：收藏夹的创建者（收藏夹为用户个人资产，按创建者隔离展示）
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
     private String description;
 }

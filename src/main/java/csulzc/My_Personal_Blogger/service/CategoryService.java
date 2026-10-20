@@ -4,6 +4,7 @@ import csulzc.My_Personal_Blogger.api.dto.category.*;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.domain.entity.Category;
 import csulzc.My_Personal_Blogger.repository.CategoryRepository;
+import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.hibernate.Hibernate;
@@ -18,6 +19,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -28,6 +30,7 @@ import java.util.stream.Collectors;
 public class CategoryService {
 
     private final CategoryRepository categoryRepository;
+    private final SecurityContextUtil securityContextUtil;
 
     /** 分类可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
     private static final Map<String, String> CATEGORY_SORT_WHITELIST = Map.of(
@@ -88,10 +91,11 @@ public class CategoryService {
             throw new IllegalArgumentException("收藏夹名称已存在");
         }
 
-        // 构建收藏夹实体
+        // 构建收藏夹实体（记录创建者，收藏夹按创建者隔离展示）
         Category.CategoryBuilder categoryBuilder = Category.builder()
                 .name(request.getName())
-                .description(request.getDescription());
+                .description(request.getDescription())
+                .owner(securityContextUtil.getCurrentUser());
 
         // 设置父收藏夹
         if (request.getParentCategoryId() != null) {
@@ -270,6 +274,66 @@ public class CategoryService {
 
         node.setChildren(children);
         return node;
+    }
+
+    // ==================== 我的收藏夹（按创建者隔离） ====================
+
+    /**
+     * 获取当前登录用户创建的全部收藏夹
+     */
+    public List<CategoryDTO> getMyCategories() {
+        Long ownerId = securityContextUtil.getCurrentUserId();
+        CategoryContext ctx = loadContext();
+        return ctx.categoriesById().values().stream()
+                .filter(c -> isOwnedBy(c, ownerId))
+                .sorted(Comparator.comparing(Category::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(c -> convertToDTO(c, ctx))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 构建当前登录用户创建的收藏夹树（用于写文章下拉选择器）
+     */
+    public List<CategoryTreeDTO> buildMyCategoryTree() {
+        Long ownerId = securityContextUtil.getCurrentUserId();
+        CategoryContext ctx = loadContext();
+        return ctx.categoriesById().values().stream()
+                .filter(c -> isOwnedBy(c, ownerId) && c.getParentCategory() == null)
+                .sorted(Comparator.comparing(Category::getCreatedAt,
+                        Comparator.nullsLast(Comparator.reverseOrder())))
+                .map(c -> buildOwnedTreeNode(c, ctx, ownerId))
+                .collect(Collectors.toList());
+    }
+
+    /**
+     * 递归构建当前用户收藏夹树节点（子节点同样限定为本人创建）
+     */
+    private CategoryTreeDTO buildOwnedTreeNode(Category category, CategoryContext ctx, Long ownerId) {
+        CategoryTreeDTO node = CategoryTreeDTO.builder()
+                .id(category.getId())
+                .name(category.getName())
+                .description(category.getDescription())
+                .articleCount(ctx.articleCounts().getOrDefault(category.getId(), 0L).intValue())
+                .children(new ArrayList<>())
+                .build();
+
+        List<CategoryTreeDTO> children = ctx.childrenMap().getOrDefault(category.getId(), List.of()).stream()
+                .filter(child -> isOwnedBy(child, ownerId))
+                .map(child -> buildOwnedTreeNode(child, ctx, ownerId))
+                .collect(Collectors.toList());
+
+        node.setChildren(children);
+        return node;
+    }
+
+    /**
+     * 判断收藏夹是否由指定用户创建
+     */
+    private boolean isOwnedBy(Category category, Long ownerId) {
+        return category.getOwner() != null
+                && category.getOwner().getId() != null
+                && category.getOwner().getId().equals(ownerId);
     }
 
     /**

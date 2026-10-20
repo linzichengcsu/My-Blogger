@@ -2,9 +2,11 @@ package csulzc.My_Personal_Blogger.repository;
 
 import csulzc.My_Personal_Blogger.domain.entity.Category;
 import csulzc.My_Personal_Blogger.domain.entity.Article;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
@@ -42,4 +44,10 @@ public interface CategoryRepository extends BaseRepository<Category, Long> {
     // 查询有文章的分类（JOIN 去重），避免 findAll 后在内存判断文章集合
     @Query("SELECT DISTINCT c FROM Category c JOIN c.articles a")
     List<Category> findWithArticles();
+
+    // 兼容历史数据：将早期未记录创建者的收藏夹归属给指定用户
+    @Modifying
+    @Transactional
+    @Query(value = "UPDATE categories SET owner_id = :ownerId WHERE owner_id IS NULL", nativeQuery = true)
+    int assignOwnerToUnowned(@Param("ownerId") Long ownerId);
 }

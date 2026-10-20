@@ -135,6 +135,28 @@ public class CategoryController {
     }
 
     /**
+     * 获取当前登录用户创建的收藏夹（写文章/个人中心使用，无需管理员权限）
+     */
+    @GetMapping("/my")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "获取我的收藏夹", description = "获取当前登录用户创建的收藏夹列表")
+    public ResponseEntity<Result<List<CategoryDTO>>> getMyCategories() {
+        List<CategoryDTO> categories = categoryService.getMyCategories();
+        return ResponseEntity.ok(Result.success(categories));
+    }
+
+    /**
+     * 获取当前登录用户创建的收藏夹树（用于写文章下拉选择器，无需管理员权限）
+     */
+    @GetMapping("/my/tree")
+    @PreAuthorize("isAuthenticated()")
+    @Operation(summary = "获取我的收藏夹树", description = "获取当前登录用户创建的收藏夹树结构")
+    public ResponseEntity<Result<List<CategoryTreeDTO>>> buildMyCategoryTree() {
+        List<CategoryTreeDTO> tree = categoryService.buildMyCategoryTree();
+        return ResponseEntity.ok(Result.success(tree));
+    }
+
+    /**
      * 获取收藏夹的完整路径（从根到当前收藏夹）
      */
     @GetMapping("/{categoryId}/path")

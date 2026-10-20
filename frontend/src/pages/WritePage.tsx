@@ -24,7 +24,7 @@ import type { UploadProps } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import MarkdownView from '@/components/MarkdownView'
-import { buildCategoryTree, createArticle, getArticleById, updateArticle, uploadFile } from '@/api'
+import { buildMyCategoryTree, createArticle, getArticleById, updateArticle, uploadFile } from '@/api'
 import { ApiError } from '@/api/request'
 import type { ArticleCreateRequest, ArticleStatus, CategoryTreeDTO } from '@/types'
 import { ROUTES } from '@/constants/routes'
@@ -58,7 +58,8 @@ export default function WritePage() {
   const tags = Form.useWatch('tags', form) as string[] | undefined
 
   useEffect(() => {
-    buildCategoryTree().then(setTree).catch(() => setTree([]))
+    // 只加载本人创建的收藏夹，避免看到其他用户创建的收藏夹
+    buildMyCategoryTree().then(setTree).catch(() => setTree([]))
     if (articleId) {
       getArticleById(articleId)
         .then((a) => {

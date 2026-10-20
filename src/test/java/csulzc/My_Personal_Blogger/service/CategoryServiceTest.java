@@ -3,10 +3,13 @@ package csulzc.My_Personal_Blogger.service;
 import csulzc.My_Personal_Blogger.api.dto.category.*;
 import csulzc.My_Personal_Blogger.domain.entity.*;
 import csulzc.My_Personal_Blogger.repository.*;
+import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 import org.springframework.boot.jpa.test.autoconfigure.TestEntityManager;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
@@ -18,7 +21,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import(CategoryService.class)
+@Import({CategoryService.class, SecurityContextUtil.class})
 @DisplayName("CategoryService 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class CategoryServiceTest {
@@ -97,11 +100,16 @@ public class CategoryServiceTest {
 
         entityManager.flush();
         entityManager.clear();
+
+        // 收藏夹创建需记录创建者，设置当前登录用户为测试用户
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(testUser.getId(), null, List.of()));
     }
 
     @AfterEach
     void tearDown() {
         entityManager.clear();
+        SecurityContextHolder.clearContext();
     }
 
     @Test
