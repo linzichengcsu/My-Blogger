@@ -17,7 +17,7 @@
 spring:
   datasource:
     # 默认指向 loadtest 容器的映射端口（13306），避免与宿主机的 dev MySQL(3306) 冲突
-    url: jdbc:mysql://${LOADTEST_DB_HOST:127.0.0.1}:${LOADTEST_DB_PORT:13306}/csulzc_blogdb_loadtest?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8&connectTimeout=5000&socketTimeout=30000
+    url: jdbc:mysql://${LOADTEST_DB_HOST:127.0.0.1}:${LOADTEST_DB_PORT:13306}/csulzc_blogdb_loadtest?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true&useUnicode=true&characterEncoding=utf8
     driver-class-name: com.mysql.cj.jdbc.Driver
     username: ${LOADTEST_DB_USERNAME:blog_lt}
     password: ${LOADTEST_DB_PASSWORD:loadtest-db-pwd}
@@ -35,6 +35,7 @@ spring:
       ddl-auto: validate             # 表结构由 Flyway 负责
     show-sql: false                  # 降噪 1：关闭 SQL 打印
     open-in-view: false
+    database-platform: org.hibernate.dialect.MySQLDialect
     properties:
       hibernate:
         format_sql: false

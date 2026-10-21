@@ -57,6 +57,11 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-redis</artifactId>
         </dependency>
+        <!-- Spring Cache 声明式缓存（含 Micrometer CacheMeterBinder，否则 actuator/metrics 无 cache.gets 等） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-cache</artifactId>
+        </dependency>
 
         <!-- Elasticsearch 全文检索（Spring Boot 4.1.1 BOM 管理 elasticsearch-java 9.4.5，
              对应 ES 服务端 9.x；IK 中文分词见 docs/elasticsearch-setup.md） -->

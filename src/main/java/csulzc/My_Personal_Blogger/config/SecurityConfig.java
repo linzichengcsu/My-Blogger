@@ -24,12 +24,19 @@ public class SecurityConfig {
 
     private final ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilterProvider;
 
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
+
     // 与 springdoc.api-docs.enabled 联动：prod 关闭文档端点时，swagger 路径不再放行
     @Value("${springdoc.api-docs.enabled:true}")
     private boolean apiDocsEnabled;
 
     public SecurityConfig(ObjectProvider<JwtAuthenticationFilter> jwtAuthenticationFilterProvider) {
         this.jwtAuthenticationFilterProvider = jwtAuthenticationFilterProvider;
+    }
+
+    private boolean isLoadTestProfile() {
+        return activeProfiles != null && activeProfiles.contains("loadtest");
     }
 
     @Bean
@@ -48,6 +55,12 @@ public class SecurityConfig {
     @Profile("test")
     public PasswordEncoder testPasswordEncoder() {
         return new BCryptPasswordEncoder(4);
+    }
+
+    @Bean
+    @Profile("loadtest")
+    public PasswordEncoder loadTestPasswordEncoder() {
+        return new BCryptPasswordEncoder(8);
     }
 
     @Bean
@@ -71,7 +84,8 @@ public class SecurityConfig {
                             .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
                             .requestMatchers("/api/files/**").authenticated()
                             .requestMatchers("/h2-console/**").permitAll()
-                            .requestMatchers("/actuator/health", "/actuator/health/**").permitAll()
+                            .requestMatchers(isLoadTestProfile() ? "/actuator/**" : "/actuator/health",
+                                    isLoadTestProfile() ? "/actuator/**" : "/actuator/health/**").permitAll()
                             .requestMatchers("/api/admin/**").hasRole("ADMIN")
                             .anyRequest().authenticated();
                 });

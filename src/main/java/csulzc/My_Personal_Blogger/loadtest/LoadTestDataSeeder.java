@@ -135,7 +135,7 @@ public class LoadTestDataSeeder implements ApplicationRunner {
         for (int i = 1; i <= articleCount; i++) {
             // 创建时间沿时间轴散开（每篇间隔 7 分钟），避免分页排序时全挤在同一时刻
             LocalDateTime createdAt = now.minusMinutes((long) i * 7);
-            int authorId = 1 + (i % AUTHOR_COUNT);
+            Long authorId = authorIds.get((i - 1) % authorIds.size());
             batch.add(new Object[]{
                     createdAt, createdAt,
                     "压测文章 #" + i + " Redis 缓存雪崩击穿穿透与 Elasticsearch 检索验证",
@@ -144,7 +144,8 @@ public class LoadTestDataSeeder implements ApplicationRunner {
                     "第 " + i + " 篇压测摘要：关键词 Redis 缓存 Elasticsearch 压测",
                     i % 500,
                     i % 200,
-                    (i * 37) % 10000
+                    (i * 37) % 10000,
+                    authorId
             });
         }
         jdbcTemplate.batchUpdate("""
