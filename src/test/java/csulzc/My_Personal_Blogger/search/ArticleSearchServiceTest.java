@@ -16,7 +16,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.io.IOException;
 import java.util.List;
@@ -109,6 +111,21 @@ class ArticleSearchServiceTest {
         assertThat(result).isNotNull();
         verify(client).search(any(Function.class), eq(ArticleDocument.class));
         verifyNoInteractions(articleRepository);
+    }
+
+    @Test
+    @DisplayName("显式指定结构化排序时直接走数据库，不调用 ES")
+    void search_usesJpa_whenExplicitSort() {
+        when(properties.isEnabled()).thenReturn(true);
+        when(clientProvider.getIfAvailable()).thenReturn(client);
+        when(articleListAssembler.buildPageResponse(any())).thenReturn(emptyResponse());
+        Pageable sorted = PageRequest.of(0, 10, Sort.by(Sort.Direction.DESC, "createdAt"));
+
+        service.search("关键字", sorted);
+
+        verify(articleRepository).findByTitleContainingAndStatus(
+                eq("关键字"), eq(Article.ArticleStatus.RELEASE), eq(sorted));
+        verifyNoInteractions(client);
     }
 
     @Test

@@ -1,9 +1,6 @@
 {
   "mappings": {
     "properties": {
-      "id": {
-        "type": "long"
-      },
       "title": {
         "type": "text",
         "analyzer": "ik_max_word",
@@ -21,24 +18,6 @@
       },
       "status": {
         "type": "keyword"
-      },
-      "authorId": {
-        "type": "long"
-      },
-      "authorName": {
-        "type": "keyword"
-      },
-      "categoryIds": {
-        "type": "long"
-      },
-      "likeCount": {
-        "type": "integer"
-      },
-      "viewCount": {
-        "type": "integer"
-      },
-      "createdAt": {
-        "type": "long"
       }
     }
   }

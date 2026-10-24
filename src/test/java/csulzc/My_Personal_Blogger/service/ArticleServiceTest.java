@@ -38,11 +38,17 @@ public class ArticleServiceTest {
     @Autowired
     private ArticleService articleService;
 
+    @MockitoBean
+    private ArticleStatService articleStatService;
+
     @Autowired
     private TestEntityManager entityManager;
 
     @Autowired
     private ArticleRepository articleRepository;
+
+    @Autowired
+    private ArticleLikeRepository articleLikeRepository;
 
     @Autowired
     private CategoryRepository categoryRepository;
@@ -622,7 +628,7 @@ public class ArticleServiceTest {
 
     @Test
     @Order(26)
-    @DisplayName("测试文章点赞 - 增加点赞数")
+    @DisplayName("测试文章点赞 - 首次点赞被接受")
     void testLikeArticle() {
         // Given - 创建一篇文章
         Article article = Article.builder()
@@ -635,19 +641,20 @@ public class ArticleServiceTest {
         entityManager.persist(article);
         entityManager.flush();
         Long articleId = article.getId();
+        setCurrentUser(testUserId);
+        when(articleStatService.recordLike(articleId, testUserId)).thenReturn(true);
 
         // When - 执行点赞
-        articleService.likeArticle(articleId);
+        boolean accepted = articleService.likeArticle(articleId);
 
-        // Then - 验证点赞数 +1
-        entityManager.clear();
-        Article liked = entityManager.find(Article.class, articleId);
-        assertThat(liked.getLikeCount()).isEqualTo(6);
+        // Then - 点赞请求交给计数服务处理
+        assertThat(accepted).isTrue();
+        verify(articleStatService).recordLike(articleId, testUserId);
     }
 
     @Test
     @Order(27)
-    @DisplayName("测试文章浏览 - 增加浏览数")
+    @DisplayName("测试文章浏览 - 记录浏览")
     void testViewArticle() {
         // Given - 创建一篇文章
         Article article = Article.builder()
@@ -664,10 +671,26 @@ public class ArticleServiceTest {
         // When - 执行浏览
         articleService.viewArticle(articleId);
 
-        // Then - 验证浏览数 +1
-        entityManager.clear();
-        Article viewed = entityManager.find(Article.class, articleId);
-        assertThat(viewed.getViewCount()).isEqualTo(11);
+        // Then - 浏览请求交给计数服务处理
+        verify(articleStatService).recordView(articleId);
+    }
+
+    @Test
+    @Order(28)
+    @DisplayName("测试删除文章 - 同步清理点赞记录")
+    void testDeleteArticle_CleansUpLikes() {
+        Long articleId = testArticleId;
+        setCurrentUser(testUserId);
+        articleLikeRepository.save(ArticleLike.builder()
+                .articleId(articleId)
+                .userId(testUserId)
+                .build());
+        entityManager.flush();
+
+        articleService.deleteArticle(articleId);
+
+        assertThat(articleLikeRepository.existsByArticleIdAndUserId(articleId, testUserId)).isFalse();
+        assertThat(articleRepository.findById(articleId)).isEmpty();
     }
 
 }

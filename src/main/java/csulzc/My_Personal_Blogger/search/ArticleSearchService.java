@@ -1,11 +1,9 @@
 package csulzc.My_Personal_Blogger.search;
 
 import co.elastic.clients.elasticsearch.ElasticsearchClient;
-import co.elastic.clients.elasticsearch._types.SortOrder;
 import co.elastic.clients.elasticsearch._types.query_dsl.TextQueryType;
 import co.elastic.clients.elasticsearch.core.BulkRequest;
 import co.elastic.clients.elasticsearch.core.IndexRequest;
-import co.elastic.clients.elasticsearch.core.SearchRequest;
 import co.elastic.clients.elasticsearch.core.SearchResponse;
 import co.elastic.clients.elasticsearch.core.search.HighlightField;
 import co.elastic.clients.elasticsearch.core.search.Hit;
@@ -38,8 +36,9 @@ import java.util.*;
  *
  * <p>职责：</p>
  * <ul>
- *   <li>搜索：{@code multi_match}（title^3 / summary^2 / content）+ 高亮 + 分页 + 排序；
- *       ES 不可用（未启用 / 连接失败 / 查询异常）时自动降级为数据库 LIKE 查询。</li>
+ *   <li>搜索：{@code multi_match}（title^3 / summary^2 / content）+ 高亮 + 分页；
+ *       计数、时间等结构化排序交由数据库处理；ES 不可用（未启用 / 连接失败 /
+ *       查询异常）时自动降级为数据库 LIKE 查询。</li>
  *   <li>索引同步：单篇索引 / 删除 / 批量索引 / 批量删除，供事务提交后的监听器调用；
  *       同步失败只记日志，绝不影响主流程。</li>
  *   <li>索引管理：启动时自动创建索引（IK mapping）、全量重建（删索引后从数据库回灌）。</li>
@@ -52,15 +51,6 @@ public class ArticleSearchService {
 
     private static final String HIGHLIGHT_PRE = "<em class=\"es-highlight\">";
     private static final String HIGHLIGHT_POST = "</em>";
-
-    /** PageRequestDTO 排序字段白名单 → ES 可排序字段映射（ES mapping 无 updatedAt/favoriteCount，取近似字段） */
-    private static final Map<String, String> SORT_FIELD_MAP = Map.of(
-            "createdAt", "createdAt",
-            "updatedAt", "createdAt",
-            "likeCount", "likeCount",
-            "viewCount", "viewCount",
-            "favoriteCount", "likeCount",
-            "id", "id");
 
     private final ObjectProvider<ElasticsearchClient> clientProvider;
     private final ElasticsearchProperties properties;
@@ -78,10 +68,11 @@ public class ArticleSearchService {
     // ========================================================================
 
     /**
-     * 搜索文章。优先走 ES，异常/未启用时自动降级为数据库 LIKE。
+     * 搜索文章。默认按相关度走 ES；显式指定结构化排序（时间 / 计数 / ID）时改走数据库，
+     * 因为 ES 文档已不再冗余存储这些字段。ES 异常/未启用时同样降级为数据库 LIKE。
      */
     public PageResponseDTO<ArticleListItemDTO> search(String keyword, Pageable pageable) {
-        if (!isEnabled()) {
+        if (!isEnabled() || pageable.getSort().isSorted()) {
             return searchByJpa(keyword, pageable);
         }
         try {
@@ -96,8 +87,7 @@ public class ArticleSearchService {
     }
 
     /**
-     * ES 全文检索：multi_match（IK 分词）+ 高亮 + 分页。
-     * 未显式排序时按相关度（_score）返回。
+     * ES 全文检索：multi_match（IK 分词）+ 高亮 + 分页，按相关度（_score）返回。
      */
     private PageResponseDTO<ArticleListItemDTO> searchByElasticsearch(String keyword, Pageable pageable) throws IOException {
         int page = pageable.getPageNumber();
@@ -120,18 +110,17 @@ public class ArticleSearchService {
                             .fields(NamedValue.of("title", HighlightField.of(f -> f.fragmentSize(80).numberOfFragments(1))),
                                     NamedValue.of("summary", HighlightField.of(f -> f.fragmentSize(150).numberOfFragments(1))),
                                     NamedValue.of("content", HighlightField.of(f -> f.fragmentSize(150).numberOfFragments(1)))));
-            applySort(s, pageable);
             return s;
         }, ArticleDocument.class);
 
         List<Long> orderedIds = new ArrayList<>();
         Map<Long, Map<String, String>> highlights = new LinkedHashMap<>();
         for (Hit<ArticleDocument> hit : response.hits().hits()) {
-            ArticleDocument doc = hit.source();
-            if (doc == null || doc.getId() == null) {
+            Long articleId = parseArticleId(hit.id());
+            if (articleId == null) {
                 continue;
             }
-            orderedIds.add(doc.getId());
+            orderedIds.add(articleId);
 
             Map<String, List<String>> hl = hit.highlight();
             if (hl != null && !hl.isEmpty()) {
@@ -142,7 +131,7 @@ public class ArticleSearchService {
                     }
                 });
                 if (!fragment.isEmpty()) {
-                    highlights.put(doc.getId(), fragment);
+                    highlights.put(articleId, fragment);
                 }
             }
         }
@@ -152,14 +141,18 @@ public class ArticleSearchService {
     }
 
     /**
-     * 将 Pageable 排序映射为 ES 排序；sort 为空（默认按相关度）时不追加排序。
+     * ES 文档 _id 即文章 ID。
      */
-    private void applySort(SearchRequest.Builder s, Pageable pageable) {
-        pageable.getSort().forEach(order -> {
-            String esField = SORT_FIELD_MAP.getOrDefault(order.getProperty(), "createdAt");
-            SortOrder dir = order.isAscending() ? SortOrder.Asc : SortOrder.Desc;
-            s.sort(so -> so.field(f -> f.field(esField).order(dir)));
-        });
+    private Long parseArticleId(String docId) {
+        if (docId == null) {
+            return null;
+        }
+        try {
+            return Long.valueOf(docId);
+        } catch (NumberFormatException e) {
+            log.warn("Elasticsearch 返回了非法文章 ID：{}", docId);
+            return null;
+        }
     }
 
     /**
@@ -226,7 +219,7 @@ public class ArticleSearchService {
                 ArticleDocument doc = toDocument(payload);
                 br.operations(op -> op.index(idx -> idx
                         .index(indexName())
-                        .id(String.valueOf(doc.getId()))
+                        .id(String.valueOf(payload.getArticleId()))
                         .document(doc)));
             }
             client().bulk(br.build());
@@ -305,10 +298,8 @@ public class ArticleSearchService {
                 if (batch.getContent().isEmpty()) {
                     break;
                 }
-                List<Long> ids = batch.getContent().stream().map(Article::getId).toList();
-                Map<Long, List<Long>> categoryIds = loadCategoryIds(ids);
                 List<ArticleIndexPayload> payloads = batch.getContent().stream()
-                        .map(a -> ArticleIndexPayload.from(a, categoryIds.getOrDefault(a.getId(), List.of())))
+                        .map(ArticleIndexPayload::from)
                         .toList();
                 bulkIndex(payloads);
                 total += payloads.size();
@@ -341,34 +332,14 @@ public class ArticleSearchService {
     }
 
     /**
-     * 批量查询分类映射：articleId -> categoryIds（避免逐篇懒加载分类集合）
+     * 组装 ES 文档：只保留全文检索所需的字符串字段。
      */
-    private Map<Long, List<Long>> loadCategoryIds(List<Long> articleIds) {
-        if (articleIds.isEmpty()) {
-            return Map.of();
-        }
-        Map<Long, List<Long>> map = new HashMap<>();
-        for (Object[] row : articleRepository.findCategoryMappingByArticleIds(articleIds)) {
-            Long articleId = (Long) row[0];
-            Long categoryId = ((csulzc.My_Personal_Blogger.domain.entity.Category) row[1]).getId();
-            map.computeIfAbsent(articleId, k -> new ArrayList<>()).add(categoryId);
-        }
-        return map;
-    }
-
     private ArticleDocument toDocument(ArticleIndexPayload payload) {
         return ArticleDocument.builder()
-                .id(payload.getArticleId())
                 .title(payload.getTitle())
                 .summary(payload.getSummary())
                 .content(payload.getContent())
                 .status(payload.getStatus())
-                .authorId(payload.getAuthorId())
-                .authorName(payload.getAuthorName())
-                .categoryIds(payload.getCategoryIds())
-                .likeCount(payload.getLikeCount())
-                .viewCount(payload.getViewCount())
-                .createdAt(payload.getCreatedAtEpochMillis())
                 .build();
     }
 

@@ -556,7 +556,7 @@ class ArticleControllerTest {
     void testLikeArticle_Success() throws Exception {
         // Given
         Long articleId = 1L;
-        doNothing().when(articleService).likeArticle(eq(articleId));
+        given(articleService.likeArticle(eq(articleId))).willReturn(true);
 
         // When & Then
         mockMvc.perform(post("/api/articles/{articleId}/like", articleId))
@@ -574,6 +574,23 @@ class ArticleControllerTest {
         // When & Then
         mockMvc.perform(post("/api/articles/{articleId}/like", -1))
                 .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    @Order(25)
+    @DisplayName("测试点赞文章 - 重复点赞")
+    void testLikeArticle_AlreadyLiked() throws Exception {
+        // Given
+        Long articleId = 1L;
+        given(articleService.likeArticle(eq(articleId))).willReturn(false);
+
+        // When & Then
+        mockMvc.perform(post("/api/articles/{articleId}/like", articleId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("请勿重复点赞"));
+
+        then(articleService).should().likeArticle(eq(articleId));
     }
 
     @Test

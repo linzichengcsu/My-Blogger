@@ -151,7 +151,8 @@ public class ArticleController {
     }
 
     @GetMapping("/search")
-    @Operation(summary = "搜索文章", description = "公开访问，仅返回已发布文章，基于 Elasticsearch 全文检索（未启用或异常时自动降级为标题模糊匹配）")
+    @Operation(summary = "搜索文章", description = "公开访问，仅返回已发布文章；默认按相关度走 Elasticsearch 全文检索，"
+            + "未启用、异常或显式指定结构化排序时自动降级为标题模糊匹配")
     public ResponseEntity<Result<PageResponseDTO<ArticleListItemDTO>>> searchArticles(
             @RequestParam String keyword,
             @ModelAttribute PageRequestDTO pageRequest) {
@@ -227,14 +228,14 @@ public class ArticleController {
     }
 
     @PostMapping("/{articleId}/like")
-    @Operation(summary = "点赞文章", description = "需要登录")
+    @Operation(summary = "点赞文章", description = "需要登录，同一用户对同一文章只能点赞一次")
     @PreAuthorize("isAuthenticated()")
     public ResponseEntity<Result<Void>> likeArticle(@PathVariable Long articleId) {
         if (articleId == null || articleId <= 0) {
             throw new IllegalArgumentException("文章ID无效");
         }
-        articleService.likeArticle(articleId);
-        return ResponseEntity.ok(Result.success(null, "点赞成功"));
+        boolean accepted = articleService.likeArticle(articleId);
+        return ResponseEntity.ok(Result.success(null, accepted ? "点赞成功" : "请勿重复点赞"));
     }
 
     @PostMapping("/{articleId}/view")

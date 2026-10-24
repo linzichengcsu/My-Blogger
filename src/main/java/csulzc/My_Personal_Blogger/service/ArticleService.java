@@ -17,6 +17,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import jakarta.persistence.EntityNotFoundException;
 import jakarta.validation.Valid;
@@ -36,6 +37,8 @@ public class ArticleService {
     private final CategoryRepository categoryRepository;
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
+    private final ArticleLikeRepository articleLikeRepository;
+    private final ArticleStatService articleStatService;
     private final SecurityContextUtil securityContextUtil;
     private final ArticleSearchService articleSearchService;
     private final ArticleListAssembler articleListAssembler;
@@ -258,6 +261,7 @@ public class ArticleService {
         // 先删分类关联与评论（各一条批量 SQL），再删文章本身；
         // 评论先删回复再删顶级，避免自引用外键约束冲突
         articleRepository.deleteCategoryMappings(articleId);
+        articleLikeRepository.deleteByArticleId(articleId);
         commentRepository.deleteRepliesByArticle(article);
         commentRepository.deleteTopLevelByArticle(article);
         articleRepository.deleteByIdDirect(articleId);
@@ -278,6 +282,7 @@ public class ArticleService {
             commentRepository.batchDeleteRepliesByArticleIds(batch);
             commentRepository.batchDeleteTopLevelByArticleIds(batch);
             articleRepository.batchDeleteCategoryMappings(batch);
+            articleLikeRepository.deleteByArticleIdIn(batch);
             total += articleRepository.batchDeleteByIds(batch);
             // 事务提交后从 Elasticsearch 批量删除
             publishBulkDeleteEvent(batch);
@@ -328,22 +333,33 @@ public class ArticleService {
 
     /**
      * 点赞文章。
-     * 注意：不再 @CacheEvict 详情缓存——每次点赞都失效缓存会让热点文章在频繁点赞时反复重建
+     *
+     * <p>请求路径只写 Redis：SADD 去重 + ZADD 待落库事件，点赞数由定时任务按实际插入
+     * {@code article_like} 的行数累加，因此重复点赞不会多计数。Redis 不可用时降级为数据库
+     * 同步去重更新。</p>
+     *
+     * <p>不再 @CacheEvict 详情缓存——每次点赞都失效缓存会让热点文章在频繁点赞时反复重建
      * 详情（每次重建还伴随额外查询），放大数据库压力。改为依赖缓存 TTL 自然过期，
-     * 点赞数在缓存期内最多滞后一个 TTL 周期。
+     * 点赞数在缓存期内最多滞后一个 TTL 周期。</p>
+     *
+     * @return true 表示本次点赞被接受；false 表示重复点赞或文章不存在
      */
-    @Transactional(timeout = 10)
-    public void likeArticle(Long articleId) {
-        articleRepository.incrementLikeCount(articleId);
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
+    public boolean likeArticle(Long articleId) {
+        Long userId = securityContextUtil.getCurrentUserId();
+        return articleStatService.recordLike(articleId, userId);
     }
 
     /**
      * 浏览文章。
-     * 注意：同 likeArticle，不再 @CacheEvict 详情缓存，避免高并发浏览导致缓存穿透放大慢查询。
+     *
+     * <p>请求路径只写 Redis 浏览量增量，由定时任务批量落库；Redis 不可用时降级为数据库
+     * 同步更新。同 likeArticle，不再 @CacheEvict 详情缓存，避免高并发浏览导致缓存穿透
+     * 放大慢查询。</p>
      */
-    @Transactional(timeout = 10)
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public void viewArticle(Long articleId) {
-        articleRepository.incrementViewCount(articleId);
+        articleStatService.recordView(articleId);
     }
 
     /**
@@ -393,7 +409,7 @@ public class ArticleService {
             return;
         }
         applicationEventPublisher.publishEvent(new ArticleIndexEvent(
-                this, ArticleIndexEvent.Operation.INDEX, List.of(ArticleIndexPayload.from(article, null))));
+                this, ArticleIndexEvent.Operation.INDEX, List.of(ArticleIndexPayload.from(article))));
     }
 
     /**
@@ -414,7 +430,7 @@ public class ArticleService {
             return;
         }
         List<ArticleIndexPayload> payloads = articleRepository.findByIdsWithAuthorAndCategories(articleIds).stream()
-                .map(article -> ArticleIndexPayload.from(article, null))
+                .map(ArticleIndexPayload::from)
                 .toList();
         applicationEventPublisher.publishEvent(new ArticleIndexEvent(
                 this, ArticleIndexEvent.Operation.BULK_INDEX, payloads));
