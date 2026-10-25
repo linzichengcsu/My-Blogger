@@ -4,6 +4,7 @@ import tools.jackson.databind.ObjectMapper;
 import csulzc.My_Personal_Blogger.api.dto.common.FileUploadResponse;
 import csulzc.My_Personal_Blogger.config.JwtProperties;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
+import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.service.FileStorageService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,7 +35,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DisplayName("FileController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Import({FileControllerTest.TestSecurityConfig.class, JwtTokenProvider.class})
+@Import({FileControllerTest.TestSecurityConfig.class, JwtTokenProvider.class, JwtBlacklistService.class})
 @EnableConfigurationProperties(JwtProperties.class)
 class FileControllerTest {
 

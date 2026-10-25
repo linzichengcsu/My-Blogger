@@ -10,6 +10,7 @@ import csulzc.My_Personal_Blogger.api.response.Result;
 import csulzc.My_Personal_Blogger.config.JwtProperties;
 import csulzc.My_Personal_Blogger.repository.UserRepository;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
+import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import csulzc.My_Personal_Blogger.service.ArticleService;
 import csulzc.My_Personal_Blogger.service.UserService;
@@ -46,7 +47,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DisplayName("ArticleController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Import({ArticleControllerTest.TestSecurityConfig.class, JwtTokenProvider.class})
+@Import({ArticleControllerTest.TestSecurityConfig.class, JwtTokenProvider.class, JwtBlacklistService.class})
 @EnableConfigurationProperties(JwtProperties.class)
 class ArticleControllerTest {
 

@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -38,6 +39,7 @@ public class UserService {
     private final JwtTokenProvider jwtTokenProvider;
     private final SecurityContextUtil securityContextUtil;
     private final PasswordValidator passwordValidator;
+    private final JwtBlacklistService jwtBlacklistService;
 
     /** 用户可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
     private static final Map<String, String> USER_SORT_WHITELIST = Map.of(
@@ -116,9 +118,13 @@ public class UserService {
         user.setLastLoginAt(LocalDateTime.now());
         User updatedUser = userRepository.save(user);
 
-        // 生成Token（包含角色信息）
+        // 生成Token（包含角色信息）；勾选「7天免登录」时签发 168h 长效 token
+        boolean rememberMe = Boolean.TRUE.equals(request.getRememberMe());
+        long accessExpiration = rememberMe
+                ? jwtTokenProvider.getJwtProperties().getRememberMeExpiration()
+                : jwtTokenProvider.getJwtProperties().getExpiration();
         String role = updatedUser.getRole().name();
-        String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getUsername(), User.UserRole.valueOf(role), jwtTokenProvider.getJwtProperties().getExpiration());
+        String accessToken = jwtTokenProvider.generateAccessToken(user.getId(), user.getUsername(), User.UserRole.valueOf(role), accessExpiration, rememberMe);
         String refreshToken = jwtTokenProvider.generateRefreshToken(user.getId(), user.getUsername(), User.UserRole.valueOf(role), jwtTokenProvider.getJwtProperties().getRefreshExpiration());
 
         UserDetailDTO userDetailDTO = convertToDetailDTO(updatedUser);
@@ -127,7 +133,7 @@ public class UserService {
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
                 .tokenType("Bearer")
-                .expiresIn(jwtTokenProvider.getJwtProperties().getExpiration())
+                .expiresIn(accessExpiration)
                 .user(userDetailDTO)
                 .build();
     }
@@ -138,6 +144,13 @@ public class UserService {
         }
 
         Long userId = jwtTokenProvider.getUserIdFromToken(refreshToken);
+
+        // 主动失效检查：登出黑名单 / 用户封禁，命中则拒绝续期
+        if (jwtBlacklistService.isBlacklisted(jwtTokenProvider.getJtiFromToken(refreshToken))
+                || jwtBlacklistService.isIssuedBeforeBan(userId, jwtTokenProvider.getIssuedAtFromToken(refreshToken))) {
+            throw new IllegalArgumentException("刷新令牌已失效");
+        }
+
         String username = jwtTokenProvider.getUsernameFromToken(refreshToken);
 
         User user = userRepository.findById(userId)
@@ -159,6 +172,27 @@ public class UserService {
                 .build();
     }
 
+    /**
+     * 用户登出：把 access/refresh token 的 jti 写入黑名单，TTL 为各自剩余有效期，立即失效。
+     * 幂等：token 为空或已失效时静默跳过。
+     */
+    public void logout(String accessToken, String refreshToken) {
+        blacklistIfValid(accessToken);
+        blacklistIfValid(refreshToken);
+    }
+
+    private void blacklistIfValid(String token) {
+        if (!StringUtils.hasText(token) || !jwtTokenProvider.validateToken(token)) {
+            return;
+        }
+        // 「7天免登录」token：登出不拉黑，等自然过期（签发后 168h 自动失效）
+        if (jwtTokenProvider.isRememberMeToken(token)) {
+            return;
+        }
+        String jti = jwtTokenProvider.getJtiFromToken(token);
+        Date expiration = jwtTokenProvider.getExpirationFromToken(token);
+        jwtBlacklistService.blacklistToken(jti, expiration.getTime() - System.currentTimeMillis());
+    }
 
     /**
      * 根据登录标识查找用户（用户名或邮箱）
@@ -376,6 +410,8 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
         user.setStatus(User.UserStatus.ACTIVE);
         userRepository.save(user);
+        // 解除封禁标记，允许新 token 生效
+        jwtBlacklistService.unbanUser(userId);
     }
 
     /**
@@ -391,6 +427,8 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
         user.setStatus(User.UserStatus.INACTIVE);
         userRepository.save(user);
+        // 封禁即时生效：iat 早于当前时间的 token 全部失效
+        banUserTokens(userId);
     }
 
     /**
@@ -406,6 +444,7 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
         user.setStatus(User.UserStatus.LOCKED);
         userRepository.save(user);
+        banUserTokens(userId);
     }
 
     /**
@@ -421,6 +460,7 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
         user.setStatus(User.UserStatus.ACTIVE);
         userRepository.save(user);
+        jwtBlacklistService.unbanUser(userId);
     }
 
     /**
@@ -442,6 +482,16 @@ public class UserService {
             commentRepository.deleteByArticle(null);
             userRepository.delete(user);
         }
+        banUserTokens(userId);
+    }
+
+    /**
+     * 封禁用户的全部 token：写入封禁时间戳，TTL 取 refresh token 有效期
+     *（其到期后该用户旧 token 已全部自然过期，标记可自动清除）
+     */
+    private void banUserTokens(Long userId) {
+        jwtBlacklistService.banUser(userId, System.currentTimeMillis(),
+                jwtTokenProvider.getJwtProperties().getRefreshExpiration());
     }
 
     // ==================== 用户查询与搜索 ====================

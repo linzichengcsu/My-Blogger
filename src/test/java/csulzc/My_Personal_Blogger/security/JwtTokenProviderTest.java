@@ -98,4 +98,39 @@ class JwtTokenProviderTest {
         assertThat(jwtProperties.getExpiration()).isEqualTo(86400000L);
         assertThat(jwtProperties.getRefreshExpiration()).isEqualTo(604800000L);
     }
+
+    @Test
+    @Order(9)
+    @DisplayName("测试Token携带唯一 jti 及签发/过期时间")
+    void testTokenContainsJti() {
+        String token1 = jwtTokenProvider.generateAccessToken(TEST_USER_ID, TEST_USERNAME, TEST_USER_ROLE, TEST_EXPIRATION);
+        String token2 = jwtTokenProvider.generateAccessToken(TEST_USER_ID, TEST_USERNAME, TEST_USER_ROLE, TEST_EXPIRATION);
+
+        String jti1 = jwtTokenProvider.getJtiFromToken(token1);
+        String jti2 = jwtTokenProvider.getJtiFromToken(token2);
+
+        assertThat(jti1).isNotBlank();
+        assertThat(jti2).isNotBlank();
+        // 每个 token 的 jti 必须唯一，黑名单才能精确吊销单个 token
+        assertThat(jti1).isNotEqualTo(jti2);
+        assertThat(jwtTokenProvider.getIssuedAtFromToken(token1)).isNotNull();
+        assertThat(jwtTokenProvider.getExpirationFromToken(token1))
+                .isAfter(jwtTokenProvider.getIssuedAtFromToken(token1));
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("测试7天免登录Token：携带 rememberMe claim 且有效期为 168h")
+    void testRememberMeToken() {
+        String rememberToken = jwtTokenProvider.generateAccessToken(TEST_USER_ID, TEST_USERNAME, TEST_USER_ROLE, 604800000L, true);
+        String normalToken = jwtTokenProvider.generateAccessToken(TEST_USER_ID, TEST_USERNAME, TEST_USER_ROLE, TEST_EXPIRATION);
+
+        assertThat(jwtTokenProvider.isRememberMeToken(rememberToken)).isTrue();
+        assertThat(jwtTokenProvider.isRememberMeToken(normalToken)).isFalse();
+
+        // 免登录 token 有效期 = 168h
+        long ttl = jwtTokenProvider.getExpirationFromToken(rememberToken).getTime()
+                - jwtTokenProvider.getIssuedAtFromToken(rememberToken).getTime();
+        assertThat(ttl).isEqualTo(604800000L);
+    }
 }

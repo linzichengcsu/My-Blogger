@@ -8,6 +8,7 @@ import csulzc.My_Personal_Blogger.domain.entity.User;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.security.RequestSourceResolver;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
+import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.service.UserService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -38,7 +39,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DisplayName("UserController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Import({UserControllerTest.TestSecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, RequestSourceResolver.class})
+@Import({UserControllerTest.TestSecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, RequestSourceResolver.class, JwtBlacklistService.class})
 class UserControllerTest {
 
     @TestConfiguration
@@ -67,6 +68,9 @@ class UserControllerTest {
 
     @MockitoBean
     private SecurityContextUtil securityContextUtil;
+
+    @Autowired
+    private JwtTokenProvider jwtTokenProvider;
 
     private UserRegisterRequest registerRequest;
     private UserLoginRequest loginRequest;
@@ -901,5 +905,36 @@ class UserControllerTest {
                 .andExpect(status().isForbidden());
 
         then(userService).should(never()).changePassword(anyLong(), anyString(), anyString());
+    }
+
+    @Test
+    @Order(48)
+    @DisplayName("测试用户登出 - 拉黑 access token 与 refresh token")
+    void testLogout() throws Exception {
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                1L, "testuser", User.UserRole.USER, 86400000L);
+
+        mockMvc.perform(post("/api/users/logout")
+                        .header("Authorization", "Bearer " + accessToken)
+                        .param("refreshToken", "some-refresh-token"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.code").value(200))
+                .andExpect(jsonPath("$.message").value("登出成功"));
+
+        then(userService).should().logout(eq(accessToken), eq("some-refresh-token"));
+    }
+
+    @Test
+    @Order(49)
+    @DisplayName("测试用户登出 - 无 refreshToken 也可登出")
+    void testLogout_WithoutRefreshToken() throws Exception {
+        String accessToken = jwtTokenProvider.generateAccessToken(
+                1L, "testuser", User.UserRole.USER, 86400000L);
+
+        mockMvc.perform(post("/api/users/logout")
+                        .header("Authorization", "Bearer " + accessToken))
+                .andExpect(status().isOk());
+
+        then(userService).should().logout(eq(accessToken), isNull());
     }
 }

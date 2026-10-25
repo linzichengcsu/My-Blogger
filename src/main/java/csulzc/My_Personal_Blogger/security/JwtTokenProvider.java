@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 
 @Getter
 @Slf4j
@@ -27,7 +28,17 @@ public class JwtTokenProvider {
      * 生成访问令牌
      */
     public String generateAccessToken(Long userId, String username, User.UserRole role, long expiration) {
-        return generateToken(userId, username, role.name(), expiration);
+        return generateAccessToken(userId, username, role, expiration, false);
+    }
+
+    /**
+     * 生成访问令牌
+     *
+     * @param rememberMe 「7天免登录」：true 时写入 rememberMe claim，
+     *                   登出时不会被拉黑，等 token 自然过期（168h）
+     */
+    public String generateAccessToken(Long userId, String username, User.UserRole role, long expiration, boolean rememberMe) {
+        return generateToken(userId, username, role.name(), expiration, rememberMe);
     }
 
     /**
@@ -40,7 +51,14 @@ public class JwtTokenProvider {
     /**
      * 生成令牌（携带角色）
      */
-    public String generateToken(Long userId, String username, String role, long expiration)
+    public String generateToken(Long userId, String username, String role, long expiration) {
+        return generateToken(userId, username, role, expiration, false);
+    }
+
+    /**
+     * 生成令牌（携带角色 + 可选免登录标记）
+     */
+    public String generateToken(Long userId, String username, String role, long expiration, boolean rememberMe)
     {
         Date now = new Date();
         Date expiryDate = new Date(now.getTime() + expiration);
@@ -50,11 +68,15 @@ public class JwtTokenProvider {
         claims.put("username", username);
         claims.put("role", role);
         claims.put("type", "access");
+        if (rememberMe) {
+            claims.put("rememberMe", true);
+        }
 
         SecretKey key = getSigningKey();
 
         return Jwts.builder()
                 .claims(claims)
+                .id(UUID.randomUUID().toString())
                 .subject(username)
                 .issuedAt(now)
                 .expiration(expiryDate)
@@ -90,6 +112,34 @@ public class JwtTokenProvider {
     public String getRoleFromToken(String token) {
         Claims claims = parseToken(token);
         return claims.get("role", String.class);
+    }
+
+    /**
+     * 从令牌中获取 jti（令牌唯一标识，用于黑名单）
+     */
+    public String getJtiFromToken(String token) {
+        return parseToken(token).getId();
+    }
+
+    /**
+     * 从令牌中获取签发时间
+     */
+    public Date getIssuedAtFromToken(String token) {
+        return parseToken(token).getIssuedAt();
+    }
+
+    /**
+     * 从令牌中获取过期时间
+     */
+    public Date getExpirationFromToken(String token) {
+        return parseToken(token).getExpiration();
+    }
+
+    /**
+     * 判断是否为「7天免登录」token（是则登出时不拉黑，等自然过期）
+     */
+    public boolean isRememberMeToken(String token) {
+        return Boolean.TRUE.equals(parseToken(token).get("rememberMe", Boolean.class));
     }
 
     /**

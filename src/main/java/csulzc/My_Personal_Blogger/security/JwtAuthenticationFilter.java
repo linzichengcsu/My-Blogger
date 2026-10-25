@@ -1,5 +1,6 @@
 package csulzc.My_Personal_Blogger.security;
 
+import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -16,6 +17,7 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.util.Collections;
+import java.util.Date;
 
 @Slf4j
 @Component
@@ -23,6 +25,7 @@ import java.util.Collections;
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtTokenProvider jwtTokenProvider;
+    private final JwtBlacklistService jwtBlacklistService;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request,
@@ -35,6 +38,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
             if (StringUtils.hasText(jwt) && jwtTokenProvider.validateToken(jwt)) {
                 Long userId = jwtTokenProvider.getUserIdFromToken(jwt);
+
+                // 主动失效检查：登出黑名单（jti）+ 用户封禁时间戳（iat 早于封禁时间的 token 作废）
+                String jti = jwtTokenProvider.getJtiFromToken(jwt);
+                Date issuedAt = jwtTokenProvider.getIssuedAtFromToken(jwt);
+                if (jwtBlacklistService.isBlacklisted(jti)
+                        || jwtBlacklistService.isIssuedBeforeBan(userId, issuedAt)) {
+                    log.debug("Token 已主动失效，拒绝认证: userId={}, jti={}", userId, jti);
+                    filterChain.doFilter(request, response);
+                    return;
+                }
+
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
                 String role = jwtTokenProvider.getRoleFromToken(jwt);
 

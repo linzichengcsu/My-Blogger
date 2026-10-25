@@ -17,4 +17,7 @@ public class UserLoginRequest {
 
     @NotBlank(message = "密码不能为空")
     private String password;
+
+    /** 7天免登录：true 时签发 168h 长效 token，登出不立即失效 */
+    private Boolean rememberMe;
 }

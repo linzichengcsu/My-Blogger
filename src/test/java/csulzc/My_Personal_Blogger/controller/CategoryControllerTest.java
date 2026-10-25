@@ -5,6 +5,7 @@ import csulzc.My_Personal_Blogger.api.dto.category.*;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.config.JwtProperties;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
+import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.service.CategoryService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -36,7 +37,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DisplayName("CategoryController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Import({CategoryControllerTest.TestSecurityConfig.class, JwtTokenProvider.class})
+@Import({CategoryControllerTest.TestSecurityConfig.class, JwtTokenProvider.class, JwtBlacklistService.class})
 @EnableConfigurationProperties(JwtProperties.class)
 class CategoryControllerTest {
 

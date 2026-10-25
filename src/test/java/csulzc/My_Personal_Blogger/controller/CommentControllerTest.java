@@ -11,6 +11,7 @@ import csulzc.My_Personal_Blogger.api.dto.user.UserProfileDTO;
 import csulzc.My_Personal_Blogger.config.JwtProperties;
 import csulzc.My_Personal_Blogger.repository.UserRepository;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
+import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import csulzc.My_Personal_Blogger.service.CommentService;
 import org.junit.jupiter.api.*;
@@ -43,7 +44,7 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @ActiveProfiles("test")
 @DisplayName("CommentController 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@Import({CommentControllerTest.TestSecurityConfig.class, SecurityContextUtil.class, JwtTokenProvider.class})
+@Import({CommentControllerTest.TestSecurityConfig.class, SecurityContextUtil.class, JwtTokenProvider.class, JwtBlacklistService.class})
 @EnableConfigurationProperties(JwtProperties.class)
 class CommentControllerTest {
 

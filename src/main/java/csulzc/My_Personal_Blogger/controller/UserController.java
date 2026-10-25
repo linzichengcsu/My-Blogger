@@ -5,6 +5,7 @@ import csulzc.My_Personal_Blogger.api.dto.user.*;
 import csulzc.My_Personal_Blogger.api.dto.user.LoginResponseDTO;
 import csulzc.My_Personal_Blogger.api.response.Result;
 import csulzc.My_Personal_Blogger.domain.entity.User;
+import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.security.RequestSourceResolver;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import csulzc.My_Personal_Blogger.service.UserService;
@@ -30,6 +31,8 @@ public class UserController {
     private final RequestSourceResolver requestSourceResolver;
 
     private final SecurityContextUtil securityContextUtil;
+
+    private final JwtTokenProvider jwtTokenProvider;
 
     /**
      * 用户注册或创建
@@ -80,6 +83,20 @@ public class UserController {
             @RequestParam String refreshToken) {
         LoginResponseDTO response = userService.refreshToken(refreshToken);
         return ResponseEntity.ok(Result.success(response, "Token刷新成功"));
+    }
+
+    /**
+     * 用户登出：将当前 access token 加入黑名单立即失效，可选提交 refreshToken 一并失效
+     */
+    @PostMapping("/logout")
+    @Operation(summary = "用户登出", description = "将当前 Token 加入黑名单立即失效；可选提交 refreshToken 一并失效")
+    public ResponseEntity<Result<Void>> logout(
+            HttpServletRequest httpRequest,
+            @RequestParam(required = false) String refreshToken) {
+        String accessToken = jwtTokenProvider.extractTokenFromHeader(
+                httpRequest.getHeader(jwtTokenProvider.getJwtProperties().getHeader()));
+        userService.logout(accessToken, refreshToken);
+        return ResponseEntity.ok(Result.success(null, "登出成功"));
     }
 
     /**

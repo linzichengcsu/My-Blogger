@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({UserService.class, SecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, PasswordValidator.class, SecurityContextUtil.class})
+@Import({UserService.class, SecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, PasswordValidator.class, SecurityContextUtil.class, JwtBlacklistService.class})
 @DisplayName("UserService 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UserServiceTest {

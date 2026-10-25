@@ -15,6 +15,9 @@ public class JwtProperties {
 
     private long refreshExpiration = 604800000;
 
+    /** 「7天免登录」token 的有效期：默认 168h（7 天），登出不拉黑、等自然过期 */
+    private long rememberMeExpiration = 604800000;
+
     private String tokenPrefix = "Bearer ";
 
     private String header = "Authorization";
