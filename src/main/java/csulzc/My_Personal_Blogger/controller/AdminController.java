@@ -2,7 +2,7 @@ package csulzc.My_Personal_Blogger.controller;
 
 import csulzc.My_Personal_Blogger.api.dto.common.ApiResponse;
 import csulzc.My_Personal_Blogger.api.dto.dashboard.DashboardStatsDTO;
-import csulzc.My_Personal_Blogger.service.AdminService;
+import csulzc.My_Personal_Blogger.service.business.AdminService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;

@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.business;
 
 import csulzc.My_Personal_Blogger.api.dto.article.*;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
@@ -10,6 +10,7 @@ import csulzc.My_Personal_Blogger.search.ArticleIndexEvent;
 import csulzc.My_Personal_Blogger.search.ArticleIndexPayload;
 import csulzc.My_Personal_Blogger.search.ArticleSearchService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
+import csulzc.My_Personal_Blogger.service.infrastructure.ArticleStatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;

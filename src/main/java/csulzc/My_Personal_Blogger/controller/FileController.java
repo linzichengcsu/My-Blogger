@@ -2,7 +2,7 @@ package csulzc.My_Personal_Blogger.controller;
 
 import csulzc.My_Personal_Blogger.api.dto.common.FileUploadResponse;
 import csulzc.My_Personal_Blogger.api.response.Result;
-import csulzc.My_Personal_Blogger.service.FileStorageService;
+import csulzc.My_Personal_Blogger.service.infrastructure.FileStorageService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.tags.Tag;

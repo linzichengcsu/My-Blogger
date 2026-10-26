@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.infrastructure;
 
 import csulzc.My_Personal_Blogger.exception.TooManyRequestsException;
 import org.junit.jupiter.api.BeforeEach;

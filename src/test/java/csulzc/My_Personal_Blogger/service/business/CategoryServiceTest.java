@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.business;
 
 import csulzc.My_Personal_Blogger.api.dto.category.*;
 import csulzc.My_Personal_Blogger.domain.entity.*;

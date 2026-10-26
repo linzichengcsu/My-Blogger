@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.infrastructure;
 
 import csulzc.My_Personal_Blogger.config.ArticleStatProperties;
 import csulzc.My_Personal_Blogger.repository.ArticleLikeRepository;

@@ -7,7 +7,7 @@ import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.api.dto.common.BatchIdRequest;
 import csulzc.My_Personal_Blogger.api.dto.comment.CommentBatchApprovalRequest;
 import csulzc.My_Personal_Blogger.api.response.Result;
-import csulzc.My_Personal_Blogger.service.CommentService;
+import csulzc.My_Personal_Blogger.service.business.CommentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

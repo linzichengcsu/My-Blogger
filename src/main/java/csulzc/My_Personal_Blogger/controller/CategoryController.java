@@ -3,7 +3,7 @@ package csulzc.My_Personal_Blogger.controller;
 import csulzc.My_Personal_Blogger.api.dto.category.*;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.api.response.Result;
-import csulzc.My_Personal_Blogger.service.CategoryService;
+import csulzc.My_Personal_Blogger.service.business.CategoryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;

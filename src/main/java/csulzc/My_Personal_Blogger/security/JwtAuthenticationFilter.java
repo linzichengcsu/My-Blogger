@@ -1,6 +1,6 @@
 package csulzc.My_Personal_Blogger.security;
 
-import csulzc.My_Personal_Blogger.service.JwtBlacklistService;
+import csulzc.My_Personal_Blogger.service.infrastructure.JwtBlacklistService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;

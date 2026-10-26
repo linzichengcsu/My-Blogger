@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.infrastructure;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;

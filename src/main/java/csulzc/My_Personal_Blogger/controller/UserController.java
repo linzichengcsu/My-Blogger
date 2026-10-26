@@ -8,7 +8,7 @@ import csulzc.My_Personal_Blogger.domain.entity.User;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.security.RequestSourceResolver;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
-import csulzc.My_Personal_Blogger.service.UserService;
+import csulzc.My_Personal_Blogger.service.business.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;

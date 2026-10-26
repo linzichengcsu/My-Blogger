@@ -14,7 +14,7 @@ import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.config.ElasticsearchProperties;
 import csulzc.My_Personal_Blogger.domain.entity.Article;
 import csulzc.My_Personal_Blogger.repository.ArticleRepository;
-import csulzc.My_Personal_Blogger.service.ArticleListAssembler;
+import csulzc.My_Personal_Blogger.service.business.ArticleListAssembler;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.ObjectProvider;

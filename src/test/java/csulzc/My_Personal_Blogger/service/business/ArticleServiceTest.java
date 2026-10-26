@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.business;
 
 import csulzc.My_Personal_Blogger.api.dto.category.CategoryDTO;
 import csulzc.My_Personal_Blogger.api.dto.user.UserProfileDTO;
@@ -6,6 +6,7 @@ import csulzc.My_Personal_Blogger.domain.entity.*;
 import csulzc.My_Personal_Blogger.repository.*;
 import csulzc.My_Personal_Blogger.search.ArticleSearchService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
+import csulzc.My_Personal_Blogger.service.infrastructure.ArticleStatService;
 import csulzc.My_Personal_Blogger.api.dto.article.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;

@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.infrastructure;
 
 import csulzc.My_Personal_Blogger.api.dto.article.ArticleCreateRequest;
 import csulzc.My_Personal_Blogger.api.dto.article.ArticleDetailDTO;
@@ -15,6 +15,8 @@ import csulzc.My_Personal_Blogger.repository.ArticleRepository;
 import csulzc.My_Personal_Blogger.repository.CategoryRepository;
 import csulzc.My_Personal_Blogger.repository.UserRepository;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
+import csulzc.My_Personal_Blogger.service.business.ArticleService;
+import csulzc.My_Personal_Blogger.service.business.CategoryService;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.ImportAutoConfiguration;

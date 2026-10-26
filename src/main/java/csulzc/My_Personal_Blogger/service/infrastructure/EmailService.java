@@ -1,4 +1,4 @@
-package csulzc.My_Personal_Blogger.service;
+package csulzc.My_Personal_Blogger.service.infrastructure;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
