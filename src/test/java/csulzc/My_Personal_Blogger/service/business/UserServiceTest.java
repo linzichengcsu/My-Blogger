@@ -9,7 +9,7 @@ import csulzc.My_Personal_Blogger.config.SecurityConfig;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.security.PasswordValidator;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
-import csulzc.My_Personal_Blogger.service.infrastructure.EmailService;
+import csulzc.My_Personal_Blogger.service.infrastructure.LightweightMailService;
 import csulzc.My_Personal_Blogger.service.infrastructure.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.service.infrastructure.LoginAttemptService;
 import csulzc.My_Personal_Blogger.service.infrastructure.PasswordResetCodeService;
@@ -32,7 +32,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({UserService.class, SecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, PasswordValidator.class, SecurityContextUtil.class, JwtBlacklistService.class, LoginAttemptService.class, PasswordResetCodeService.class, EmailService.class})
+@Import({UserService.class, SecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, PasswordValidator.class, SecurityContextUtil.class, JwtBlacklistService.class, LoginAttemptService.class, PasswordResetCodeService.class, LightweightMailService.class})
 @DisplayName("UserService 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UserServiceTest {

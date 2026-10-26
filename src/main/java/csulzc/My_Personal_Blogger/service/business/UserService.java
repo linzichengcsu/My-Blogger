@@ -9,7 +9,7 @@ import csulzc.My_Personal_Blogger.repository.UserRepository;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.security.PasswordValidator;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
-import csulzc.My_Personal_Blogger.service.infrastructure.EmailService;
+import csulzc.My_Personal_Blogger.service.infrastructure.LightweightMailService;
 import csulzc.My_Personal_Blogger.service.infrastructure.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.service.infrastructure.LoginAttemptService;
 import csulzc.My_Personal_Blogger.service.infrastructure.PasswordResetCodeService;
@@ -53,7 +53,7 @@ public class UserService {
     private final JwtBlacklistService jwtBlacklistService;
     private final LoginAttemptService loginAttemptService;
     private final PasswordResetCodeService passwordResetCodeService;
-    private final EmailService emailService;
+    private final LightweightMailService lightweightMailService;
 
     /** 用户可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
     private static final Map<String, String> USER_SORT_WHITELIST = Map.of(
@@ -322,7 +322,7 @@ public class UserService {
         }
 
         String code = passwordResetCodeService.issueCode(username);
-        emailService.sendVerificationCode(user.getEmail(), code, 10);
+        lightweightMailService.sendVerificationCode(user.getEmail(), code, 10);
     }
 
     /**

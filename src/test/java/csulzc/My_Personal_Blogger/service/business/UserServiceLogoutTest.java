@@ -10,7 +10,7 @@ import csulzc.My_Personal_Blogger.repository.UserRepository;
 import csulzc.My_Personal_Blogger.security.JwtTokenProvider;
 import csulzc.My_Personal_Blogger.security.PasswordValidator;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
-import csulzc.My_Personal_Blogger.service.infrastructure.EmailService;
+import csulzc.My_Personal_Blogger.service.infrastructure.LightweightMailService;
 import csulzc.My_Personal_Blogger.service.infrastructure.JwtBlacklistService;
 import csulzc.My_Personal_Blogger.service.infrastructure.LoginAttemptService;
 import csulzc.My_Personal_Blogger.service.infrastructure.PasswordResetCodeService;
@@ -58,7 +58,7 @@ class UserServiceLogoutTest {
     @Mock
     private PasswordResetCodeService passwordResetCodeService;
     @Mock
-    private EmailService emailService;
+    private LightweightMailService lightweightMailService;
 
     @InjectMocks
     private UserService userService;
