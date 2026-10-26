@@ -1,15 +1,15 @@
 /**
- * 登录 / 注册（同一文件导出两个页面，减少层级）。
+ * 登录 / 注册 / 忘记密码（同一文件导出三个页面，减少层级）。
  * 居中卡片式布局，注册成功后自动登录并跳转回来源页。
  */
-import { useState } from 'react'
-import { BookOutlined, LockOutlined, MailOutlined, UserOutlined } from '@ant-design/icons'
-import { Button, Card, Form, Input, message, Typography } from 'antd'
+import { useEffect, useState } from 'react'
+import { BookOutlined, LockOutlined, MailOutlined, SafetyOutlined, UserOutlined } from '@ant-design/icons'
+import { Button, Card, Form, Input, message, Steps, Typography } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { forgotPassword, register } from '@/api'
+import { forgotPassword, register, sendPasswordResetCode } from '@/api'
 import { ApiError } from '@/api/request'
 import { useAuth } from '@/context/AuthContext'
-import type { UserLoginRequest, UserPasswordResetRequest, UserRegisterRequest } from '@/types'
+import type { UserLoginRequest, UserPasswordCodeRequest, UserPasswordResetRequest, UserRegisterRequest } from '@/types'
 import { ROUTES } from '@/constants/routes'
 
 const { Title, Text } = Typography
@@ -89,13 +89,39 @@ export function LoginPage() {
 
 export function ForgotPasswordPage() {
   const navigate = useNavigate()
-  const [form] = Form.useForm<UserPasswordResetRequest & { confirmPassword: string }>()
+  const [step, setStep] = useState(0)
+  const [username, setUsername] = useState('')
   const [loading, setLoading] = useState(false)
+  const [countdown, setCountdown] = useState(0)
+  const [codeForm] = Form.useForm<UserPasswordCodeRequest>()
+  const [resetForm] = Form.useForm<UserPasswordResetRequest & { confirmPassword: string }>()
 
-  const onFinish = async (values: UserPasswordResetRequest) => {
+  // 60 秒发送冷却倒计时（组件卸载时自动清理定时器）
+  useEffect(() => {
+    if (countdown <= 0) return
+    const timer = setInterval(() => setCountdown((c) => c - 1), 1000)
+    return () => clearInterval(timer)
+  }, [countdown > 0])
+
+  const onSendCode = async (values: UserPasswordCodeRequest) => {
     setLoading(true)
     try {
-      await forgotPassword(values)
+      await sendPasswordResetCode(values)
+      setUsername(values.username)
+      setCountdown(60)
+      setStep(1)
+      message.success('验证码已发送，请查收邮件')
+    } catch (err) {
+      message.error(err instanceof ApiError ? err.message : '验证码发送失败，请重试')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const onReset = async (values: UserPasswordResetRequest & { confirmPassword: string }) => {
+    setLoading(true)
+    try {
+      await forgotPassword({ username, code: values.code, newPassword: values.newPassword })
       message.success('密码重置成功，请使用新密码登录')
       navigate(ROUTES.login, { replace: true })
     } catch (err) {
@@ -107,32 +133,52 @@ export function ForgotPasswordPage() {
 
   return (
     <AuthCard title="忘记密码" footer={<Text type="secondary">想起来了？<Link to={ROUTES.login}>去登录</Link></Text>}>
-      <Form form={form} size="large" onFinish={onFinish} autoComplete="off">
-        <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
-          <Input prefix={<UserOutlined />} placeholder="用户名" />
-        </Form.Item>
-        <Form.Item name="email" rules={[{ required: true, message: '请输入注册邮箱' }, { type: 'email', message: '邮箱格式不正确' }]}>
-          <Input prefix={<MailOutlined />} placeholder="注册时使用的邮箱" />
-        </Form.Item>
-        <Form.Item name="newPassword" rules={passwordRules} hasFeedback>
-          <Input.Password prefix={<LockOutlined />} placeholder="新密码（8-20 位，含大小写/数字/特殊字符）" />
-        </Form.Item>
-        <Form.Item
-          name="confirmPassword"
-          dependencies={['newPassword']}
-          rules={[
-            { required: true, message: '请再次输入新密码' },
-            ({ getFieldValue }) => ({
-              validator: (_, value) => (value === getFieldValue('newPassword') ? Promise.resolve() : Promise.reject(new Error('两次输入的密码不一致'))),
-            }),
-          ]}
-        >
-          <Input.Password prefix={<LockOutlined />} placeholder="确认新密码" />
-        </Form.Item>
-        <Button type="primary" htmlType="submit" block loading={loading}>
-          重置密码
-        </Button>
-      </Form>
+      <Steps
+        size="small"
+        current={step}
+        items={[{ title: '验证身份' }, { title: '重置密码' }]}
+        style={{ marginBottom: 24 }}
+      />
+      {step === 0 ? (
+        <Form form={codeForm} size="large" onFinish={onSendCode} autoComplete="off">
+          <Form.Item name="username" rules={[{ required: true, message: '请输入用户名' }]}>
+            <Input prefix={<UserOutlined />} placeholder="用户名" />
+          </Form.Item>
+          <Form.Item name="email" rules={[{ required: true, message: '请输入注册邮箱' }, { type: 'email', message: '邮箱格式不正确' }]}>
+            <Input prefix={<MailOutlined />} placeholder="注册时使用的邮箱" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block loading={loading} disabled={countdown > 0}>
+            {countdown > 0 ? `验证码已发送（${countdown}s 后可重发）` : '发送验证码'}
+          </Button>
+        </Form>
+      ) : (
+        <Form form={resetForm} size="large" onFinish={onReset} autoComplete="off">
+          <Form.Item name="code" rules={[{ required: true, message: '请输入邮箱验证码' }]}>
+            <Input prefix={<SafetyOutlined />} placeholder="邮箱验证码" />
+          </Form.Item>
+          <Form.Item name="newPassword" rules={passwordRules} hasFeedback>
+            <Input.Password prefix={<LockOutlined />} placeholder="新密码（8-20 位，含大小写/数字/特殊字符）" />
+          </Form.Item>
+          <Form.Item
+            name="confirmPassword"
+            dependencies={['newPassword']}
+            rules={[
+              { required: true, message: '请再次输入新密码' },
+              ({ getFieldValue }) => ({
+                validator: (_, value) => (value === getFieldValue('newPassword') ? Promise.resolve() : Promise.reject(new Error('两次输入的密码不一致'))),
+              }),
+            ]}
+          >
+            <Input.Password prefix={<LockOutlined />} placeholder="确认新密码" />
+          </Form.Item>
+          <Button type="primary" htmlType="submit" block loading={loading}>
+            重置密码
+          </Button>
+          <Button type="link" block onClick={() => setStep(0)} style={{ marginTop: 8 }}>
+            返回上一步
+          </Button>
+        </Form>
+      )}
     </AuthCard>
   )
 }

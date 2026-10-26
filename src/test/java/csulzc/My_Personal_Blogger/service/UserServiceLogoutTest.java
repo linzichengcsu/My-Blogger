@@ -49,6 +49,12 @@ class UserServiceLogoutTest {
     private PasswordValidator passwordValidator;
     @Mock
     private JwtBlacklistService jwtBlacklistService;
+    @Mock
+    private LoginAttemptService loginAttemptService;
+    @Mock
+    private PasswordResetCodeService passwordResetCodeService;
+    @Mock
+    private EmailService emailService;
 
     @InjectMocks
     private UserService userService;
@@ -147,7 +153,7 @@ class UserServiceLogoutTest {
 
         UserLoginRequest request = UserLoginRequest.builder()
                 .username("testuser").password("password").rememberMe(true).build();
-        LoginResponseDTO response = userService.loginWithToken(request);
+        LoginResponseDTO response = userService.loginWithToken(request, null);
 
         assertThat(response.getAccessToken()).isEqualTo("access-token");
         assertThat(response.getExpiresIn()).isEqualTo(props.getRememberMeExpiration());
@@ -176,7 +182,7 @@ class UserServiceLogoutTest {
 
         UserLoginRequest request = UserLoginRequest.builder()
                 .username("testuser").password("password").build();
-        LoginResponseDTO response = userService.loginWithToken(request);
+        LoginResponseDTO response = userService.loginWithToken(request, null);
 
         assertThat(response.getExpiresIn()).isEqualTo(props.getExpiration());
     }

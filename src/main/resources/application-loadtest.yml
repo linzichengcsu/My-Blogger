@@ -72,6 +72,8 @@ spring:
     socket-timeout: 10s
 
 app:
+  login-protection:
+    enabled: false                  # 限流会让压测登录请求被 429 拒绝，压测环境整体关闭
   cache:
     enabled: true                   # 压测必须开缓存
   search:

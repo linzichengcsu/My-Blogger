@@ -1,0 +1,6 @@
+# 测试环境专用配置：保证全量测试确定性，不依赖本机 Redis 状态
+app:
+  login-protection:
+    enabled: false
+  password-reset:
+    enabled: true

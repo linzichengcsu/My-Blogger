@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({UserService.class, SecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, PasswordValidator.class, SecurityContextUtil.class, JwtBlacklistService.class})
+@Import({UserService.class, SecurityConfig.class, JwtTokenProvider.class, JwtProperties.class, PasswordValidator.class, SecurityContextUtil.class, JwtBlacklistService.class, LoginAttemptService.class, PasswordResetCodeService.class, EmailService.class})
 @DisplayName("UserService 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UserServiceTest {
@@ -237,7 +237,7 @@ public class UserServiceTest {
         // Given - 准备数据（已在 setUp 中准备）
 
         // When - 执行登录操作
-        LoginResponseDTO result = userService.loginWithToken(loginRequest);
+        LoginResponseDTO result = userService.loginWithToken(loginRequest, null);
 
         // Then - 验证结果
         assertNotNull(result);
@@ -262,8 +262,25 @@ public class UserServiceTest {
 
         // When & Then - 应该抛出异常
         assertThrows(IllegalArgumentException.class, () -> {
-            userService.loginWithToken(wrongPasswordRequest);
+            userService.loginWithToken(wrongPasswordRequest, null);
         });
+    }
+
+    @Test
+    @Order(8)
+    @DisplayName("测试用户登录(新方法-带Token) - 用户不存在，统一返回用户名或密码错误")
+    void testLoginWithToken_UserNotFound_UnifiedMessage() {
+        // Given - 使用不存在的用户名
+        UserLoginRequest notFoundRequest = UserLoginRequest.builder()
+                .username("no_such_user")
+                .password("whatever@123")
+                .build();
+
+        // When & Then - 与密码错误统一为相同异常与信息（防用户枚举）
+        IllegalArgumentException ex = assertThrows(IllegalArgumentException.class, () -> {
+            userService.loginWithToken(notFoundRequest, null);
+        });
+        assertEquals("用户名或密码错误", ex.getMessage());
     }
 
     @Test
@@ -271,7 +288,7 @@ public class UserServiceTest {
     @DisplayName("测试刷新Token - 成功")
     void testRefreshToken_Success() {
         // Given - 先登录获取刷新令牌
-        LoginResponseDTO loginResult = userService.loginWithToken(loginRequest);
+        LoginResponseDTO loginResult = userService.loginWithToken(loginRequest, null);
         String refreshToken = loginResult.getRefreshToken();
 
         // When - 刷新Token
@@ -451,7 +468,7 @@ public class UserServiceTest {
                 .username("testuser")
                 .password(newPassword)
                 .build();
-        LoginResponseDTO result = userService.loginWithToken(newLoginRequest);
+        LoginResponseDTO result = userService.loginWithToken(newLoginRequest, null);
         assertNotNull(result);
     }
 
@@ -509,7 +526,7 @@ public class UserServiceTest {
                 .username("testuser")
                 .password(newPassword)
                 .build();
-        LoginResponseDTO result = userService.loginWithToken(newLoginRequest);
+        LoginResponseDTO result = userService.loginWithToken(newLoginRequest, null);
         assertNotNull(result);
     }
 

@@ -206,7 +206,7 @@ class UserControllerTest {
     @Order(4)
     @DisplayName("测试用户登录(带Token) - 成功")
     void testLogin_Success() throws Exception {
-        given(userService.loginWithToken(any(UserLoginRequest.class)))
+        given(userService.loginWithToken(any(UserLoginRequest.class), any()))
                 .willReturn(loginResponseDTO);
 
         mockMvc.perform(post("/api/users/login")
@@ -220,7 +220,7 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.data.tokenType").value("Bearer"))
                 .andExpect(jsonPath("$.data.user.username").value("testuser"));
 
-        then(userService).should().loginWithToken(any(UserLoginRequest.class));
+        then(userService).should().loginWithToken(any(UserLoginRequest.class), any());
     }
 
     @Test
@@ -284,32 +284,39 @@ class UserControllerTest {
 
     @Test
     @Order(9)
-    @DisplayName("测试获取用户详情 - 通过用户名成功")
+    @DisplayName("测试获取用户公开资料 - 通过用户名成功（脱敏，不含邮箱）")
     void testGetUserDetail_ByUsername_Success() throws Exception {
         String username = "testuser";
-        given(userService.getUserDetailByUsername(eq(username)))
-                .willReturn(userDetailDTO);
+        UserProfileDTO profileDTO = UserProfileDTO.builder()
+                .id(1L)
+                .username(username)
+                .displayName("测试用户")
+                .articleCount(0L)
+                .build();
+        given(userService.getUserProfileByUsername(eq(username)))
+                .willReturn(profileDTO);
 
         mockMvc.perform(get("/api/users/username/{username}", username))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data.username").value("testuser"));
+                .andExpect(jsonPath("$.data.username").value("testuser"))
+                .andExpect(jsonPath("$.data.email").doesNotExist());
 
-        then(userService).should().getUserDetailByUsername(eq(username));
+        then(userService).should().getUserProfileByUsername(eq(username));
     }
 
     @Test
     @Order(10)
-    @DisplayName("测试获取用户详情 - 用户不存在")
+    @DisplayName("测试获取用户公开资料 - 用户不存在")
     void testGetUserDetailByUsername_NotFound() throws Exception {
         String username = "nonexistent";
-        given(userService.getUserDetailByUsername(eq(username)))
+        given(userService.getUserProfileByUsername(eq(username)))
                 .willThrow(new jakarta.persistence.EntityNotFoundException("用户不存在"));
 
         mockMvc.perform(get("/api/users/username/{username}", username))
                 .andExpect(status().isNotFound());
 
-        then(userService).should().getUserDetailByUsername(eq(username));
+        then(userService).should().getUserProfileByUsername(eq(username));
     }
 
 

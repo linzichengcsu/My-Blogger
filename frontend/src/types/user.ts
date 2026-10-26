@@ -90,9 +90,15 @@ export interface UserPasswordChangeRequest {
   newPassword: string
 }
 
-/** 忘记密码请求（用户名 + 注册邮箱验证身份） */
-export interface UserPasswordResetRequest {
+/** 忘记密码-发送验证码请求（用户名 + 注册邮箱验证身份） */
+export interface UserPasswordCodeRequest {
   username: string
   email: string
+}
+
+/** 忘记密码-重置密码请求（用户名 + 邮箱验证码 + 新密码） */
+export interface UserPasswordResetRequest {
+  username: string
+  code: string
   newPassword: string
 }

@@ -59,9 +59,9 @@ export function getUserActivity(userId: number): Promise<UserActivityDTO> {
   return http.get<UserActivityDTO>(`/users/${userId}/activity`)
 }
 
-/** 通过用户名获取用户详情（公开） */
-export function getUserDetailByUsername(username: string): Promise<UserDetailDTO> {
-  return http.get<UserDetailDTO>(`/users/username/${encodeURIComponent(username)}`)
+/** 通过用户名获取用户公开资料（公开；后端返回 UserProfileDTO，不含 email/status/role/lastLoginAt） */
+export function getUserDetailByUsername(username: string): Promise<UserProfileDTO> {
+  return http.get<UserProfileDTO>(`/users/username/${encodeURIComponent(username)}`)
 }
 
 /* ---------------- 用户状态管理（管理员） ---------------- */

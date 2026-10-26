@@ -67,10 +67,12 @@ public class UserController {
      * 用户登录(返回Token)
      */
     @PostMapping("/login")
-    @Operation(summary = "用户登录", description = "返回Token")
+    @Operation(summary = "用户登录", description = "返回Token；失败次数过多将触发账号/IP 维度限流（429）")
     public ResponseEntity<Result<LoginResponseDTO>> login(
-            @Valid @RequestBody UserLoginRequest request) {
-        LoginResponseDTO response = userService.loginWithToken(request);
+            @Valid @RequestBody UserLoginRequest request,
+            HttpServletRequest httpRequest) {
+        String clientIp = requestSourceResolver.resolveClientIp(httpRequest);
+        LoginResponseDTO response = userService.loginWithToken(request, clientIp);
         return ResponseEntity.ok(Result.success(response, "登录成功"));
     }
 
@@ -100,13 +102,24 @@ public class UserController {
     }
 
     /**
-     * 忘记密码（无需登录）：用户名 + 注册邮箱验证身份后重置密码
+     * 忘记密码第一步：发送邮箱验证码（无需登录）
+     */
+    @PostMapping("/forgot-password/send-code")
+    @Operation(summary = "忘记密码-发送验证码", description = "校验用户名与注册邮箱匹配后发送验证码，10 分钟有效；60 秒发送冷却")
+    public ResponseEntity<Result<Void>> sendPasswordResetCode(
+            @Valid @RequestBody UserPasswordCodeRequest request) {
+        userService.sendPasswordResetCode(request.getUsername(), request.getEmail());
+        return ResponseEntity.ok(Result.success(null, "验证码已发送，请查收邮件"));
+    }
+
+    /**
+     * 忘记密码第二步：凭邮箱验证码重置密码（无需登录）
      */
     @PostMapping("/forgot-password")
-    @Operation(summary = "忘记密码", description = "无需登录，通过用户名和注册邮箱验证身份后重置密码")
+    @Operation(summary = "忘记密码-重置密码", description = "凭用户名 + 邮箱验证码重置密码，重置后所有旧登录态立即失效")
     public ResponseEntity<Result<Void>> forgotPassword(
             @Valid @RequestBody UserPasswordResetRequest request) {
-        userService.forgotPasswordReset(request.getUsername(), request.getEmail(), request.getNewPassword());
+        userService.resetPasswordWithCode(request.getUsername(), request.getCode(), request.getNewPassword());
         return ResponseEntity.ok(Result.success(null, "密码重置成功，请使用新密码登录"));
     }
 
@@ -137,14 +150,16 @@ public class UserController {
 
     /**
      * 获取用户详情（通过用户名）
+     * <p>公开接口仅返回公开资料（UserProfileDTO），不暴露 email/status/role/lastLoginAt，
+     * 防止用户枚举与撞库情报收集。</p>
      */
     @GetMapping("/username/{username}")
-    @Operation(summary = "获取用户详情", description = "通过用户名获取用户详情")
-    public ResponseEntity<Result<UserDetailDTO>> getUserDetailByUsername(@PathVariable String username) {
+    @Operation(summary = "获取用户公开资料", description = "通过用户名获取用户公开资料（不含邮箱等隐私字段）")
+    public ResponseEntity<Result<UserProfileDTO>> getUserDetailByUsername(@PathVariable String username) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("用户名不能为空");
         }
-        UserDetailDTO user = userService.getUserDetailByUsername(username);
+        UserProfileDTO user = userService.getUserProfileByUsername(username);
         return ResponseEntity.ok(Result.success(user));
     }
 

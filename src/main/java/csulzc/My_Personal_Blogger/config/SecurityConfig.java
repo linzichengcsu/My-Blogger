@@ -74,7 +74,8 @@ public class SecurityConfig {
                     if (apiDocsEnabled) {
                         auth.requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**").permitAll();
                     }
-                    auth.requestMatchers("/", "/api/users/register", "/api/users/login", "/api/users/refresh", "/api/users/forgot-password").permitAll()
+                    auth.requestMatchers("/", "/api/users/register", "/api/users/login", "/api/users/refresh",
+                            "/api/users/forgot-password", "/api/users/forgot-password/send-code").permitAll()
                             .requestMatchers(HttpMethod.GET, "/api/users/**").permitAll()
                             .requestMatchers("/api/users/**").authenticated()
                             .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()

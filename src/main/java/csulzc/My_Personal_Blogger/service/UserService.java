@@ -15,6 +15,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -32,6 +33,12 @@ import java.util.stream.Collectors;
 @Transactional(readOnly = true)
 public class UserService {
 
+    /**
+     * 恒定时间校验用的哑哈希：用户不存在时也对密码跑一次 BCrypt，
+     * 消除「用户不存在直接快速返回」的时序差异，防时序侧信道用户枚举。
+     */
+    private static final String DUMMY_PASSWORD_HASH = new BCryptPasswordEncoder().encode("login-timing-dummy");
+
     private final UserRepository userRepository;
     private final ArticleRepository articleRepository;
     private final CommentRepository commentRepository;
@@ -40,6 +47,9 @@ public class UserService {
     private final SecurityContextUtil securityContextUtil;
     private final PasswordValidator passwordValidator;
     private final JwtBlacklistService jwtBlacklistService;
+    private final LoginAttemptService loginAttemptService;
+    private final PasswordResetCodeService passwordResetCodeService;
+    private final EmailService emailService;
 
     /** 用户可排序字段白名单，避免无索引/不存在字段排序导致 filesort 或 500 */
     private static final Map<String, String> USER_SORT_WHITELIST = Map.of(
@@ -96,14 +106,28 @@ public class UserService {
 
     /**
      * 用户登录
+     *
+     * <p>登录保护：先检查账号 / IP 维度失败锁定（429），失败统一返回
+     * 「用户名或密码错误」并对不存在的用户名执行哑 BCrypt 校验（防枚举与时序侧信道）。</p>
+     *
+     * @param clientIp 客户端 IP（由控制器解析），用于 IP 维度限流，可为 null
      */
     @Transactional
-    public LoginResponseDTO loginWithToken(UserLoginRequest request) {
-        User user = findUserByLoginId(request.getUsername());
+    public LoginResponseDTO loginWithToken(UserLoginRequest request, String clientIp) {
+        loginAttemptService.checkLocked(request.getUsername(), clientIp);
+
+        User user = findUserByLoginId(request.getUsername())
+                .orElseGet(() -> {
+                    // 用户不存在：同样计入失败，并执行哑哈希校验拉平响应时间
+                    loginAttemptService.recordFailure(request.getUsername(), clientIp);
+                    passwordEncoder.matches(request.getPassword(), DUMMY_PASSWORD_HASH);
+                    throw new IllegalArgumentException("用户名或密码错误");
+                });
 
         // 验证密码
         if (!passwordEncoder.matches(request.getPassword(), user.getPasswordHash())) {
-            throw new IllegalArgumentException("密码错误");
+            loginAttemptService.recordFailure(request.getUsername(), clientIp);
+            throw new IllegalArgumentException("用户名或密码错误");
         }
 
         // 检查用户状态
@@ -113,6 +137,8 @@ public class UserService {
         if (user.getStatus() == User.UserStatus.LOCKED) {
             throw new IllegalStateException("用户已被锁定");
         }
+
+        loginAttemptService.recordSuccess(request.getUsername());
 
         // 更新最后登录时间
         user.setLastLoginAt(LocalDateTime.now());
@@ -195,17 +221,14 @@ public class UserService {
     }
 
     /**
-     * 根据登录标识查找用户（用户名或邮箱）
+     * 根据登录标识查找用户（用户名或邮箱），找不到返回 empty（由调用方决定错误处理）
      */
-    private User findUserByLoginId(String loginId) {
+    private Optional<User> findUserByLoginId(String loginId) {
         Optional<User> user = userRepository.findByUsername(loginId);
         if (user.isEmpty()) {
             user = userRepository.findByEmail(loginId);
         }
-        if (user.isEmpty()) {
-            throw new EntityNotFoundException("用户不存在");
-        }
-        return user.get();
+        return user;
     }
 
     // ==================== 用户信息查询 ====================
@@ -281,12 +304,12 @@ public class UserService {
     }
 
     /**
-     * 忘记密码：通过用户名 + 注册邮箱验证身份后重置密码（无需登录）
+     * 忘记密码第一步：校验用户名与注册邮箱匹配后，向该邮箱发送验证码（10 分钟有效）。
+     *
+     * <p>防滥用：发送冷却 60 秒 / 账号，每小时最多 5 次（见 PasswordResetCodeService）。
+     * 用户名与邮箱不匹配时统一返回同一错误信息，不泄露哪一项有误。</p>
      */
-    @Transactional
-    public void forgotPasswordReset(String username, String email, String newPassword) {
-        passwordValidator.validate(newPassword);
-
+    public void sendPasswordResetCode(String username, String email) {
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() -> new IllegalArgumentException("用户名或邮箱不正确"));
 
@@ -294,13 +317,29 @@ public class UserService {
             throw new IllegalArgumentException("用户名或邮箱不正确");
         }
 
-        if (passwordEncoder.matches(newPassword, user.getPasswordHash())) {
-            throw new IllegalArgumentException("新密码不能与原密码相同");
+        String code = passwordResetCodeService.issueCode(username);
+        emailService.sendVerificationCode(user.getEmail(), code, 10);
+    }
+
+    /**
+     * 忘记密码第二步：校验邮箱验证码后重置密码，并使该用户全部旧 token 失效
+     * （防止密码已泄露的旧会话在重置后继续可用）。
+     */
+    @Transactional
+    public void resetPasswordWithCode(String username, String code, String newPassword) {
+        passwordValidator.validate(newPassword);
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() -> new IllegalArgumentException("验证码错误或已过期"));
+
+        if (!passwordResetCodeService.verifyAndConsume(username, code)) {
+            throw new IllegalArgumentException("验证码错误或已过期");
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         user.setPasswordUpdatedAt(LocalDateTime.now());
         userRepository.save(user);
+        banUserTokens(user.getId());
     }
 
     /**

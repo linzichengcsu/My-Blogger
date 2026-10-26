@@ -90,6 +90,13 @@ public class GlobalExceptionHandler {
                 .body(Result.error(403, e.getMessage() != null ? e.getMessage() : "没有权限访问"));
     }
 
+    @ExceptionHandler(csulzc.My_Personal_Blogger.exception.TooManyRequestsException.class)
+    public ResponseEntity<Result<Void>> handleTooManyRequestsException(csulzc.My_Personal_Blogger.exception.TooManyRequestsException e) {
+        log.warn("触发访问频率限制: {}", e.getMessage());
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(Result.error(429, e.getMessage()));
+    }
+
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<Result<Void>> handleAccessDeniedException(AccessDeniedException e) {
         log.warn("权限不足: {}", e.getMessage());

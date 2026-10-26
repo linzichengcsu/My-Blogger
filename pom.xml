@@ -75,6 +75,12 @@
             <artifactId>commons-pool2</artifactId>
         </dependency>
 
+        <!-- 邮件发送（忘记密码邮箱验证码） -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
 		<!-- 开发工具 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

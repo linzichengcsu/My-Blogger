@@ -27,4 +27,24 @@ public class RequestSourceResolver {
         String origin = request.getHeader("Origin");
         return StringUtils.hasText(origin) && FRONTEND_ORIGINS.contains(origin);
     }
+
+    /**
+     * 解析客户端真实 IP：优先取反向代理透传的 X-Forwarded-For 首段，
+     * 其次 X-Real-IP，最后回退到直连地址。
+     */
+    public String resolveClientIp(HttpServletRequest request) {
+        String forwarded = request.getHeader("X-Forwarded-For");
+        if (StringUtils.hasText(forwarded)) {
+            // X-Forwarded-For: client, proxy1, proxy2 —— 首段为客户端原始 IP
+            String first = forwarded.split(",")[0].trim();
+            if (!first.isEmpty() && !"unknown".equalsIgnoreCase(first)) {
+                return first;
+            }
+        }
+        String realIp = request.getHeader("X-Real-IP");
+        if (StringUtils.hasText(realIp) && !"unknown".equalsIgnoreCase(realIp)) {
+            return realIp.trim();
+        }
+        return request.getRemoteAddr();
+    }
 }
