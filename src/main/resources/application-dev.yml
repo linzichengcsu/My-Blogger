@@ -86,6 +86,7 @@ jwt:
   header: Authorization
 
 file:
+  type: local
   upload-dir: uploads
   max-file-size: 5242880
   allowed-file-types:

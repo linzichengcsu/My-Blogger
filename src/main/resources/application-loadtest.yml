@@ -100,6 +100,7 @@ jwt:
   header: Authorization
 
 file:
+  type: local
   upload-dir: uploads-loadtest       # 与 dev/prod 的上传目录隔离
   max-file-size: 5242880
   allowed-file-types:

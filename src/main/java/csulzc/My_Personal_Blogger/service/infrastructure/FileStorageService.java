@@ -3,6 +3,7 @@ package csulzc.My_Personal_Blogger.service.infrastructure;
 import csulzc.My_Personal_Blogger.config.FileStorageProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.UrlResource;
 import org.springframework.stereotype.Service;
@@ -10,37 +11,30 @@ import org.springframework.web.multipart.MultipartFile;
 
 import jakarta.annotation.PostConstruct;
 import java.io.IOException;
-import java.io.InputStream;
 import java.net.MalformedURLException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
-import java.util.Arrays;
-import java.util.Base64;
-import java.util.Map;
-import java.util.Set;
 import java.util.UUID;
 
+/**
+ * 本地磁盘存储实现。
+ * <p>
+ * 通过 {@code file.type=local}（或未配置）激活，依赖 {@link FileValidator} 进行统一的安全校验。
+ * 未来切换到 OSS / S3 / MinIO 时，只需新增一个 StorageService 实现类并修改配置即可。
+ * </p>
+ */
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class FileStorageService {
+@ConditionalOnProperty(name = "file.type", havingValue = "local", matchIfMissing = true)
+public class FileStorageService implements StorageService {
 
     private final FileStorageProperties fileStorageProperties;
+    private final FileValidator fileValidator;
 
     private Path fileStorageLocation;
-
-    private static final Map<String, byte[]> MAGIC_BYTES = Map.of(
-            "image/jpeg", new byte[]{(byte) 0xFF, (byte) 0xD8, (byte) 0xFF},
-            "image/png", new byte[]{(byte) 0x89, 0x50, 0x4E, 0x47},
-            "image/gif", new byte[]{0x47, 0x49, 0x46, 0x38},
-            "image/webp", new byte[]{0x52, 0x49, 0x46, 0x46}
-    );
-
-    private static final Set<String> ALLOWED_EXTENSIONS = Set.of(
-            ".jpg", ".jpeg", ".png", ".gif", ".webp"
-    );
 
     @PostConstruct
     public void init() {
@@ -54,12 +48,10 @@ public class FileStorageService {
         }
     }
 
+    @Override
     public String storeFile(MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            throw new IllegalArgumentException("文件不能为空");
-        }
-
-        validateFile(file);
+        // 统一校验（空/大小/MIME/扩展名/魔数）
+        fileValidator.validateFull(file);
 
         try {
             String originalFileName = file.getOriginalFilename();
@@ -67,14 +59,9 @@ public class FileStorageService {
                 throw new IllegalArgumentException("文件名无效");
             }
 
-            String sanitizedFileName = sanitizeFileName(originalFileName);
-            String fileExtension = getFileExtension(sanitizedFileName);
-
-            if (!ALLOWED_EXTENSIONS.contains(fileExtension)) {
-                throw new IllegalArgumentException("不允许的文件扩展名: " + fileExtension);
-            }
-
-            validateFileMagicBytes(file, file.getContentType());
+            // 清洗 + 取扩展名 + UUID 重命名
+            String sanitizedFileName = FileValidator.sanitizeFileName(originalFileName);
+            String fileExtension = FileValidator.getFileExtension(sanitizedFileName);
 
             String newFileName = UUID.randomUUID().toString() + fileExtension;
 
@@ -90,13 +77,14 @@ public class FileStorageService {
         }
     }
 
-    public Resource loadFileAsResource(String fileName) {
+    @Override
+    public Resource loadFileAsResource(String storageKey) {
         try {
-            if (fileName == null || fileName.isBlank()) {
+            if (storageKey == null || storageKey.isBlank()) {
                 throw new IllegalArgumentException("文件名不能为空");
             }
 
-            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            Path filePath = this.fileStorageLocation.resolve(storageKey).normalize();
             validatePathWithinStorage(filePath);
 
             Resource resource = new UrlResource(filePath.toUri());
@@ -111,13 +99,14 @@ public class FileStorageService {
         }
     }
 
-    public void deleteFile(String fileName) {
+    @Override
+    public void deleteFile(String storageKey) {
         try {
-            if (fileName == null || fileName.isBlank()) {
+            if (storageKey == null || storageKey.isBlank()) {
                 throw new IllegalArgumentException("文件名不能为空");
             }
 
-            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
+            Path filePath = this.fileStorageLocation.resolve(storageKey).normalize();
             validatePathWithinStorage(filePath);
 
             Files.deleteIfExists(filePath);
@@ -127,141 +116,22 @@ public class FileStorageService {
         }
     }
 
-    public String getFileUrl(String fileName) {
-        return "/api/files/" + fileName;
+    @Override
+    public String getFileUrl(String storageKey) {
+        return "/api/files/" + storageKey;
     }
 
-    private void validateFile(MultipartFile file) {
-        long fileSize = file.getSize();
-        long maxFileSize = fileStorageProperties.getMaxFileSize();
+    // ==================== 本地实现私有（存储后端相关，不进接口） ====================
 
-        if (fileSize > maxFileSize) {
-            throw new IllegalArgumentException("文件大小超过限制，最大允许: " + (maxFileSize / 1024 / 1024) + "MB");
-        }
-
-        String contentType = file.getContentType();
-        if (contentType == null) {
-            throw new IllegalArgumentException("无法识别文件类型");
-        }
-
-        String[] allowedTypes = fileStorageProperties.getAllowedFileTypes();
-        if (allowedTypes == null || !Arrays.asList(allowedTypes).contains(contentType)) {
-            throw new IllegalArgumentException("不支持的文件类型: " + contentType);
-        }
-    }
-
-    private void validateFileMagicBytes(MultipartFile file, String contentType) {
-        byte[] expectedMagic = MAGIC_BYTES.get(contentType);
-        if (expectedMagic == null) {
-            throw new IllegalArgumentException("无法验证文件内容类型");
-        }
-
-        try (InputStream is = file.getInputStream()) {
-            byte[] headerBytes = is.readNBytes(expectedMagic.length);
-            if (headerBytes.length < expectedMagic.length) {
-                throw new IllegalArgumentException("文件内容过短，无法验证");
-            }
-
-            for (int i = 0; i < expectedMagic.length; i++) {
-                if (headerBytes[i] != expectedMagic[i]) {
-                    throw new IllegalArgumentException("文件内容与声明的类型不匹配");
-                }
-            }
-        } catch (IOException ex) {
-            throw new RuntimeException("文件验证失败");
-        }
-    }
-
-    private String sanitizeFileName(String fileName) {
-        String name = Paths.get(fileName).getFileName().toString();
-        return name.replaceAll("[^a-zA-Z0-9.\\-_]", "_");
-    }
-
+    /**
+     * 防止路径穿越攻击：确保目标路径始终在存储目录内。
+     * <p>
+     * OSS 实现通常不需要此校验（对象 key 本身不具备路径语义）。
+     * </p>
+     */
     private void validatePathWithinStorage(Path targetPath) {
         if (!targetPath.startsWith(this.fileStorageLocation)) {
             throw new IllegalArgumentException("非法的文件路径访问");
         }
-    }
-
-    private String getFileExtension(String fileName) {
-        int lastDotIndex = fileName.lastIndexOf(".");
-        if (lastDotIndex == -1) {
-            return "";
-        }
-        return fileName.substring(lastDotIndex).toLowerCase();
-    }
-
-    public String encodeFileToBase64(String fileName) {
-        try {
-            if (fileName == null || fileName.isBlank()) {
-                throw new IllegalArgumentException("文件名不能为空");
-            }
-
-            Path filePath = this.fileStorageLocation.resolve(fileName).normalize();
-            validatePathWithinStorage(filePath);
-
-            byte[] fileContent = Files.readAllBytes(filePath);
-            return Base64.getEncoder().encodeToString(fileContent);
-        } catch (IOException ex) {
-            log.error("文件转Base64失败", ex);
-            throw new RuntimeException("文件转Base64失败");
-        }
-    }
-
-    public String decodeBase64ToFile(String base64Data, String originalFileName) {
-        try {
-            if (base64Data == null || base64Data.isBlank()) {
-                throw new IllegalArgumentException("Base64数据不能为空");
-            }
-            if (originalFileName == null || originalFileName.isBlank()) {
-                throw new IllegalArgumentException("文件名不能为空");
-            }
-
-            String base64Content = base64Data;
-            if (base64Data.contains(",")) {
-                base64Content = base64Data.split(",", 2)[1];
-            }
-
-            byte[] decodedBytes = Base64.getDecoder().decode(base64Content);
-
-            long maxFileSize = fileStorageProperties.getMaxFileSize();
-            if (decodedBytes.length > maxFileSize) {
-                throw new IllegalArgumentException("Base64解码后文件大小超过限制，最大允许: " + (maxFileSize / 1024 / 1024) + "MB");
-            }
-
-            String sanitizedFileName = sanitizeFileName(originalFileName);
-            String fileExtension = getFileExtension(sanitizedFileName);
-
-            if (!ALLOWED_EXTENSIONS.contains(fileExtension)) {
-                fileExtension = getFileExtensionFromMimeType(base64Data);
-            }
-
-            if (!ALLOWED_EXTENSIONS.contains(fileExtension)) {
-                throw new IllegalArgumentException("不支持的文件类型");
-            }
-
-            String newFileName = UUID.randomUUID().toString() + fileExtension;
-
-            Path targetLocation = this.fileStorageLocation.resolve(newFileName).normalize();
-            validatePathWithinStorage(targetLocation);
-
-            Files.write(targetLocation, decodedBytes);
-
-            return newFileName;
-        } catch (IllegalArgumentException ex) {
-            throw ex;
-        } catch (Exception ex) {
-            log.error("Base64转文件失败", ex);
-            throw new RuntimeException("Base64转文件失败");
-        }
-    }
-
-    private String getFileExtensionFromMimeType(String mimeType) {
-        if (mimeType == null) return "";
-        if (mimeType.contains("image/jpeg")) return ".jpg";
-        if (mimeType.contains("image/png")) return ".png";
-        if (mimeType.contains("image/gif")) return ".gif";
-        if (mimeType.contains("image/webp")) return ".webp";
-        return "";
     }
 }

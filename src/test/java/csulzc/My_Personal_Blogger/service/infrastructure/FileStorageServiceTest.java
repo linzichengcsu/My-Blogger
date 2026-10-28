@@ -11,18 +11,27 @@ import org.springframework.test.context.ActiveProfiles;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Base64;
 
 import static org.assertj.core.api.Assertions.*;
 
+/**
+ * StorageService（本地磁盘实现）集成测试。
+ * <p>
+ * 直接走 Spring 完整上下文，验证 storeFile / loadFileAsResource / deleteFile / getFileUrl
+ * 四个核心方法的完整链路（包括文件系统 I/O 和校验逻辑）。
+ * </p>
+ * <p>
+ * Base64 相关能力已迁移至 {@link Base64Service}，对应测试见 {@link Base64ServiceTest}。
+ * </p>
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("FileStorageService 测试")
+@DisplayName("StorageService（本地磁盘） 集成测试")
 public class FileStorageServiceTest {
 
     @Autowired
-    private FileStorageService fileStorageService;
+    private StorageService storageService;
 
     @Autowired
     private FileStorageProperties fileStorageProperties;
@@ -58,7 +67,7 @@ public class FileStorageServiceTest {
                 content
         );
 
-        String fileName = fileStorageService.storeFile(file);
+        String fileName = storageService.storeFile(file);
         uploadedFileName = fileName;
 
         assertThat(fileName).isNotNull();
@@ -74,7 +83,7 @@ public class FileStorageServiceTest {
     void testLoadFileAsResource_Success() {
         assertThat(uploadedFileName).isNotNull();
 
-        Resource resource = fileStorageService.loadFileAsResource(uploadedFileName);
+        Resource resource = storageService.loadFileAsResource(uploadedFileName);
 
         assertThat(resource).isNotNull();
         assertThat(resource.exists()).isTrue();
@@ -84,7 +93,7 @@ public class FileStorageServiceTest {
     @Order(3)
     @DisplayName("测试获取文件URL")
     void testGetFileUrl() {
-        String url = fileStorageService.getFileUrl(uploadedFileName);
+        String url = storageService.getFileUrl(uploadedFileName);
 
         assertThat(url).isEqualTo("/api/files/" + uploadedFileName);
     }
@@ -100,7 +109,7 @@ public class FileStorageServiceTest {
                 new byte[0]
         );
 
-        assertThatThrownBy(() -> fileStorageService.storeFile(emptyFile))
+        assertThatThrownBy(() -> storageService.storeFile(emptyFile))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("文件不能为空");
     }
@@ -116,7 +125,7 @@ public class FileStorageServiceTest {
                 "test content".getBytes()
         );
 
-        assertThatThrownBy(() -> fileStorageService.storeFile(txtFile))
+        assertThatThrownBy(() -> storageService.storeFile(txtFile))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("不支持的文件类型");
     }
@@ -127,7 +136,7 @@ public class FileStorageServiceTest {
     void testDeleteFile_Success() {
         assertThat(uploadedFileName).isNotNull();
 
-        fileStorageService.deleteFile(uploadedFileName);
+        storageService.deleteFile(uploadedFileName);
 
         Path filePath = Paths.get(fileStorageProperties.getUploadDir()).toAbsolutePath().normalize().resolve(uploadedFileName);
         assertThat(Files.exists(filePath)).isFalse();
@@ -137,76 +146,8 @@ public class FileStorageServiceTest {
     @Order(7)
     @DisplayName("测试加载不存在的文件 - 失败")
     void testLoadNonExistentFile_Fail() {
-        assertThatThrownBy(() -> fileStorageService.loadFileAsResource("non-existent.jpg"))
+        assertThatThrownBy(() -> storageService.loadFileAsResource("non-existent.jpg"))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("文件不存在");
-    }
-
-    @Test
-    @Order(8)
-    @DisplayName("测试文件转Base64编码 - 成功")
-    void testEncodeFileToBase64_Success() throws Exception {
-        byte[] content = createFakeJpegContent();
-        MockMultipartFile file = new MockMultipartFile(
-                "file",
-                "test-base64.jpg",
-                "image/jpeg",
-                content
-        );
-        String fileName = fileStorageService.storeFile(file);
-
-        String base64Data = fileStorageService.encodeFileToBase64(fileName);
-
-        assertThat(base64Data).isNotNull();
-        assertThat(base64Data).isNotEmpty();
-
-        byte[] decodedBytes = Base64.getDecoder().decode(base64Data);
-        assertThat(decodedBytes).isEqualTo(content);
-
-        fileStorageService.deleteFile(fileName);
-    }
-
-    @Test
-    @Order(9)
-    @DisplayName("测试Base64解码并保存为文件 - 成功")
-    void testDecodeBase64ToFile_Success() {
-        String originalContent = "test base64 image content";
-        String base64Data = Base64.getEncoder().encodeToString(originalContent.getBytes());
-
-        String fileName = fileStorageService.decodeBase64ToFile(base64Data, "test-decode.jpg");
-
-        assertThat(fileName).isNotNull();
-        assertThat(fileName).endsWith(".jpg");
-
-        Path filePath = Paths.get(fileStorageProperties.getUploadDir()).toAbsolutePath().normalize().resolve(fileName);
-        assertThat(Files.exists(filePath)).isTrue();
-
-        try {
-            byte[] savedContent = Files.readAllBytes(filePath);
-            assertThat(new String(savedContent)).isEqualTo(originalContent);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
-
-        fileStorageService.deleteFile(fileName);
-    }
-
-    @Test
-    @Order(10)
-    @DisplayName("测试带data URI前缀的Base64解码 - 成功")
-    void testDecodeBase64WithDataUriPrefix_Success() {
-        String originalContent = "test with data uri prefix";
-        String base64Data = Base64.getEncoder().encodeToString(originalContent.getBytes());
-        String dataUri = "data:image/png;base64," + base64Data;
-
-        String fileName = fileStorageService.decodeBase64ToFile(dataUri, "test-datauri.png");
-
-        assertThat(fileName).isNotNull();
-        assertThat(fileName).endsWith(".png");
-
-        Path filePath = Paths.get(fileStorageProperties.getUploadDir()).toAbsolutePath().normalize().resolve(fileName);
-        assertThat(Files.exists(filePath)).isTrue();
-
-        fileStorageService.deleteFile(fileName);
     }
 }
