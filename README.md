@@ -76,7 +76,7 @@
 | 接口文档    | springdoc-openapi 3.1.1（Swagger UI）                            |
 | 前端模板    | React 19 + TypeScript 5.7 + Vite 6                              |
 | 其他      | Lombok、AOP、Actuator、CommonMark、commons-lang3                   |
-| 测试      | JUnit 5、Mockito、AssertJ、Spring Boot Test、Testcontainers、Docker |
+| 测试      | JUnit 5、Mockito、AssertJ、Spring Boot Test、Vitest、Testing Library |
 
 ---
 
@@ -91,7 +91,7 @@
 | MySQL   | 8.0+ |
 | Redis   | 6.0+（Docker 亦可） |
 | Node.js | 20.0+ |
-| pnpm    | 9.0+ |
+| npm     | 10+（随 Node 22 内置） |
 | React   | 19 |
 | ElasticSearch | 9.4.5 |
 
@@ -124,10 +124,11 @@ mvn spring-boot:run
 ### 5. 启动前端React项目
 ```bash
 cd frontend
-pnpm install
-pnpm run typecheck
-pnpm run build
-pnpm run dev
+npm install
+npm run typecheck
+npm run test:run
+npm run build
+npm run dev
 ```
 
 ### 6. 验证
@@ -221,7 +222,26 @@ mvn -Dtest=ApiIntegrationTest test
 ```
 
 接入 CI：任意 Maven 项目/流水线执行上述命令即可；也可按需拆分到 `integration-test` 阶段，或扩展为按模块的多个测试类。
-运行前提与项目一致：JDK 23 + Maven。
+运行前提与项目一致：JDK 21 + Maven。
+
+### 前端单元测试（Vitest + Testing Library）
+
+前端使用 **Vitest**（jsdom 环境）+ **@testing-library/react**，测试代码位于 `frontend/src/__tests__/`，覆盖：
+
+- 工具函数与路由常量（`utils.ts`、`constants/routes.ts`）
+- 请求层（Token 存取、`Result` / `ApiResponse` 解包、401 静默刷新与重放）
+- API 客户端（认证、文章、用户、文件上传）
+- 登录态上下文（`AuthContext` 的恢复、登录、登出、管理员判定）
+- 组件渲染（`ArticleCard`、`MarkdownView`、`SiteLayout` 导航与搜索交互）
+
+```bash
+cd frontend
+npm run test:run        # 单次运行
+npm run test            # 监听模式
+npm run test:coverage   # 运行并生成覆盖率报告（coverage/）
+```
+
+前端 CI（`.github/workflows/frontend-test.yml`）在 typecheck 后自动执行 `npm run test:run`。
 
 ---
 

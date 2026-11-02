@@ -121,13 +121,13 @@ export default function ArticleListPage() {
 
 | 用途 | 命令 |
 | --- | --- |
-| 安装依赖 | `cd frontend && pnpm install` |
-| 类型检查 | `cd frontend && pnpm run typecheck` |
-| 构建 | `cd frontend && pnpm run build` |
-| 开发启动 | `cd frontend && pnpm run dev`（5173，代理 /api → localhost:8080） |
+| 安装依赖 | `cd frontend && npm install` |
+| 类型检查 | `cd frontend && npm run typecheck` |
+| 构建 | `cd frontend && npm run build` |
+| 开发启动 | `cd frontend && npm run dev`（5173，代理 /api → localhost:8080） |
 
 > 注意：若沙箱/CI 环境限制 esbuild 的 spawn（`spawn EPERM`），
-> 请退出受限环境后在常规终端执行 `pnpm run build`。
+> 请退出受限环境后在常规终端执行 `npm run build`。
 
 ## 后续扩展（页面层）
 

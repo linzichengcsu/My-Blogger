@@ -33,5 +33,5 @@ paths:
 
 ## Verification
 
-- 前端改动后运行 `cd frontend && pnpm run build`。
+- 前端改动后运行 `cd frontend && npm run build`。
 - 涉及浏览器交互时，用本地浏览器实际打开页面验证。

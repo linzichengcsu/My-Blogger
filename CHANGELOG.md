@@ -61,6 +61,7 @@
 - 48+ 测试类，分布于 Entity / Repository / Service / Controller / Security 五层
 - 端到端 API 集成测试 `ApiIntegrationTest`（32 用例，`@SpringBootTest(webEnvironment = RANDOM_PORT)` + `TestRestTemplate`，走真实安全过滤器链）
 - 测试环境使用 H2（`MODE=MySQL`）+ 独立配置，不依赖外部 MySQL / Redis
+- 前端单元测试：Vitest + Testing Library（jsdom），覆盖工具函数、请求层（Token 与 401 刷新）、API 客户端、登录态上下文与核心组件
 - 本地环境压测脚本（k6 + Python），含主场景 / 雪崩 / 击穿 / 穿透 / 搜索五种场景
 
 ### 🐛 已修复的重要问题
@@ -76,7 +77,7 @@
 ### ⚠️ 已知限制
 
 - 文件存储当前仅支持本地磁盘，接口已抽象为 `StorageService`，预留对象存储（OSS/S3）切换扩展
-- 前端暂未接入单元测试框架（Vitest / Jest）
+- 前端单元测试已覆盖工具函数、请求层、API 客户端、登录态与核心组件，但页面级集成测试尚未接入
 - 邮件验证码功能需配置 SMTP 环境变量才可使用，未配置时静默跳过
 - Admin 管理接口暂未在 CI 中覆盖端到端测试
 
@@ -91,8 +92,8 @@
 | 中间件 | HikariCP、Actuator + Prometheus |
 | 接口文档 | springdoc-openapi 3.1.1 |
 | 前端 | Ant Design 5、React Router 7、Vite 6、Tailwind CSS 4 |
-| 构建 | Maven 3.9、pnpm 10、Docker Compose |
-| 测试 | JUnit 5、Mockito、AssertJ、Spring Boot Test、k6 |
+| 构建 | Maven 3.9、npm（随 Node 22 内置）、Docker Compose |
+| 测试 | JUnit 5、Mockito、AssertJ、Spring Boot Test、Vitest、Testing Library、k6 |
 
 ---
 

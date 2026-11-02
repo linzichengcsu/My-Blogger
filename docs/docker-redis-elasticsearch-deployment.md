@@ -12,7 +12,7 @@
 | MySQL | 9.x（库名 `csulzc_blogdb_prod`，账号 `blog_app`） | `application-prod.yml` |
 | Redis | 7.x，Lettuce 连接池（commons-pool2 已引入） | `pom.xml` / README |
 | Elasticsearch | **9.4.5** + IK 分词 **9.4.5**（版本必须逐位一致） | Spring Boot 4.1.1 BOM 管理 elasticsearch-java 9.4.5 |
-| 前端 | Vite 6 + React 19，pnpm 构建，开发端口 5173 | `frontend/package.json` |
+| 前端 | Vite 6 + React 19，npm 构建，开发端口 5173 | `frontend/package.json` |
 | 后端端口 | 8080（未显式配置，即 Spring Boot 默认） | — |
 
 开始前必须知道的三个项目事实：
@@ -53,7 +53,6 @@ target/
 .github/
 frontend/node_modules/
 frontend/dist/
-.pnpm-store/
 uploads/
 docs/
 *.md
@@ -151,15 +150,14 @@ ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS org.springframework.boot.loader.laun
 # ---------- 构建阶段 ----------
 FROM node:22-alpine AS build
 WORKDIR /app
-RUN corepack enable          # 启用 pnpm（仓库用 pnpm-lock.yaml，且 pnpm 11 读 pnpm-workspace.yaml）
 
-COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
-RUN pnpm install --frozen-lockfile
+COPY package.json package-lock.json ./
+RUN npm ci
 COPY . .
 # request.ts 默认 baseURL 就是 '/api'，这里显式注入防止误读开发态 .env.development
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
-RUN pnpm build               # 产物在 /app/dist
+RUN npm run build              # 产物在 /app/dist
 
 # ---------- 托管阶段 ----------
 FROM nginx:1.27-alpine
@@ -370,7 +368,7 @@ networks:
 ```bash
 cd deploy
 cp .env.example .env          # Windows: copy .env.example .env，然后编辑填真实密码
-docker compose build          # 首次构建 5~15 分钟（Maven/pnpm 拉依赖）
+docker compose build          # 首次构建 5~15 分钟（Maven/npm 拉依赖）
 docker compose up -d          # 按健康依赖顺序启动
 docker compose ps             # 全部 healthy 才算就绪
 docker compose logs -f blog   # 观察 Flyway 迁移与 ES 索引初始化日志
