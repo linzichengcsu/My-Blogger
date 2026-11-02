@@ -9,6 +9,7 @@
 - [行为准则](#行为准则)
 - [开发环境搭建](#开发环境搭建)
 - [编码规范](#编码规范)
+- [分支模型](#分支模型)
 - [提交流程](#提交流程)
 - [测试](#测试)
 - [SQL / 数据库迁移](#sql--数据库迁移)
@@ -137,6 +138,54 @@ mvn -Dtest=ApiIntegrationTest test   # 跑端到端集成测试
 
 ---
 
+## 分支模型
+
+项目采用 `main` + `develop` 双分支协作：
+
+| 分支 | 角色 | 合入来源 | 去向 |
+|---|---|---|---|
+| `main` | 稳定、可发布代码 | `develop`（发布）、`hotfix/*`（紧急修复） | 打 tag 发布 |
+| `develop` | 日常集成分支 | `feat/*`、`fix/*`、`refactor/*`、`docs/*`、`test/*`、`chore/*` | `main`（发布时） |
+
+- **日常功能 / 修复**：从 `develop` 切出，PR 合回 `develop`
+- **发布**：`develop` → `main` 的 PR，评审通过后合并并打 tag（如 `v1.2.0`）
+- **紧急修复**：从 `main` 切 `hotfix/xxx`，PR 合入 `main`，随后再合并回 `develop`，避免修复丢失
+- 任何人**不直接 push** `main` / `develop`，一律走 PR
+
+### 发布
+
+```bash
+git checkout develop && git pull upstream develop
+# 在 GitHub 上发起 develop → main 的 PR，CI 全绿后合并
+git checkout main && git pull upstream main
+git tag -a v1.2.0 -m "release: v1.2.0"
+git push upstream v1.2.0
+```
+
+**合并方式**：`feat/*` → `develop` 可用 Squash；`develop` → `main` 请用 Merge commit，避免两条分支历史分叉、后续发布出现大量重复冲突。
+
+### 紧急修复
+
+```bash
+git checkout main && git pull upstream main
+git checkout -b hotfix/xxx
+# 修复 + 测试 + 提交
+git push origin hotfix/xxx          # PR 目标分支：main
+# 合入 main 后，再把 main 合并回 develop
+git checkout develop && git pull upstream develop
+git merge upstream/main && git push upstream develop
+```
+
+### 分支保护（仓库管理员在 GitHub 设置）
+
+1. **Settings → General → Default branch** 改为 `develop`，让新克隆和新 PR 默认指向集成分支
+2. **Settings → Branches** 对 `main` 和 `develop` 各添加一条 protection rule：
+   - Require a pull request before merging（至少 1 个 approval）
+   - Require status checks to pass：勾选 `Maven Test (JDK 21)` 与 `Typecheck, Unit Test & Build (Node 22)`
+   - Require branches to be up to date before merging
+   - 取消 Allow force pushes / Allow deletions
+   - 可选：Require linear history、Require conversation resolution
+
 ## 提交流程
 
 ```bash
@@ -145,9 +194,9 @@ git clone https://github.com/<你的用户名>/My-Personal-Blogger.git
 cd My-Personal-Blogger
 git remote add upstream https://github.com/linzichengcsu/My-Personal-Blogger.git
 
-# 2. 建分支（从 main 切）
-git checkout main
-git pull upstream main
+# 2. 建分支（从 develop 切）
+git checkout develop
+git pull upstream develop
 git checkout -b feat/your-feature-name    # 或 fix/xxx、refactor/xxx
 
 # 3. 本地开发 + 跑测试
@@ -162,13 +211,15 @@ git commit -m "feat(article): 文章编辑器支持自动保存"
 
 # 5. Push → 发起 Pull Request
 git push origin feat/your-feature-name
-# 在 GitHub 上比较 main...feat/your-feature-name，创建 PR
+# 在 GitHub 上比较 develop...feat/your-feature-name，创建 PR（目标分支选 develop）
 ```
+
+**PR 目标分支**：日常改动一律合入 `develop`；只有发布（`develop → main`）和紧急修复（`hotfix/* → main`）才以 `main` 为目标。
 
 **PR 被合并前请保持分支同步**：
 ```bash
 git fetch upstream
-git rebase upstream/main
+git rebase upstream/develop
 # 有冲突则解决后继续
 git push origin feat/your-feature-name --force-with-lease
 ```

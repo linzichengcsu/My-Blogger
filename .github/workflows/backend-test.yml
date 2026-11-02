@@ -20,6 +20,9 @@ name: Backend Tests
 
 on:
   push:
+    branches:
+      - main
+      - develop
     paths:
       - "src/**"
       - "pom.xml"
@@ -27,6 +30,9 @@ on:
       - ".mvn/**"
       - ".github/workflows/backend-test.yml"
   pull_request:
+    branches:
+      - main
+      - develop
     paths:
       - "src/**"
       - "pom.xml"
