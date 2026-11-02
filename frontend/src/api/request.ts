@@ -10,7 +10,7 @@
  *
  * 页面层不要直接使用 axios，统一从这里导入 http / request。
  */
-import axios, { AxiosError } from 'axios'
+import axios from 'axios'
 import type { AxiosInstance, AxiosRequestConfig, InternalAxiosRequestConfig } from 'axios'
 import type { ApiResponse, Result } from '../types/common'
 import type { LoginResponseDTO } from '../types/user'
@@ -93,9 +93,13 @@ export class ApiError extends Error {
 /** 将 axios 错误（网络/超时/HTTP 非 2xx）规范化为 ApiError */
 function normalizeError(error: unknown): unknown {
   if (error instanceof ApiError) return error
-  if (error instanceof AxiosError) {
-    const status = error.response?.status
-    const responseData = error.response?.data as Record<string, unknown> | undefined
+  // 使用 duck-typing 代替 instanceof AxiosError，避免 ESM/CJS 混用导致的构造函数不匹配
+  // 判定特征：AxiosError 有 isAxiosError=true 且带 response 对象
+  const e = error as Record<string, unknown> | undefined
+  if (e?.isAxiosError === true) {
+    const response = e.response as Record<string, unknown> | undefined
+    const status = response?.status as number | undefined
+    const responseData = response?.data as Record<string, unknown> | undefined
     const message =
       responseData?.message ??
       (status === 401 ? '登录已过期，请重新登录' : status ? `请求失败（HTTP ${status}）` : '网络异常，请稍后重试')
@@ -213,12 +217,18 @@ service.interceptors.request.use((config: InternalAxiosRequestConfig) => {
   return config
 })
 
-// 响应拦截：401 刷新重放 / 其余错误规范化
+// 响应拦截：仅负责 401 刷新重放
+// 错误规范化挪到 request() 里统一做，确保无论是否经过拦截器都能拿到 ApiError
 service.interceptors.response.use(
   (response) => response,
   async (error: unknown) => {
-    if (error instanceof AxiosError && error.response?.status === 401) {
-      const config = error.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined
+    // duck-typing 判断 AxiosError（避免 ESM/CJS 混用导致的构造函数 instanceof 失败）
+    const e = error as Record<string, unknown> | undefined
+    const isAxiosErr = e?.isAxiosError === true
+    const response = e?.response as Record<string, unknown> | undefined
+    const status = response?.status as number | undefined
+    if (isAxiosErr && status === 401) {
+      const config = e?.config as (InternalAxiosRequestConfig & { _retried?: boolean }) | undefined
       const refreshToken = getRefreshToken()
       const isRefreshCall = config?.url?.includes('/users/refresh')
       if (config && !config._retried && refreshToken && !isRefreshCall) {
@@ -230,13 +240,13 @@ service.interceptors.response.use(
         } catch (refreshError) {
           clearAuthTokens()
           unauthorizedHandler?.()
-          return Promise.reject(normalizeError(refreshError))
+          return Promise.reject(refreshError)
         }
       }
       clearAuthTokens()
       unauthorizedHandler?.()
     }
-    return Promise.reject(normalizeError(error))
+    return Promise.reject(error)
   },
 )
 
@@ -248,7 +258,12 @@ export interface RequestOptions extends Omit<AxiosRequestConfig, 'url' | 'method
 
 /** 发送请求并解包为业务数据；返回原始响应请用 service */
 export async function request<T>(config: AxiosRequestConfig): Promise<T> {
-  const response = await service.request<T>(config)
+  let response
+  try {
+    response = await service.request<T>(config)
+  } catch (error) {
+    throw normalizeError(error)
+  }
   return unwrapBody<T>(response.data, response.status)
 }
 
