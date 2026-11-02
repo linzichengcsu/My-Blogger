@@ -1,0 +1,88 @@
+name: 🐛 Bug 报告
+description: 提交一个可复现的 bug，帮助我们定位问题
+labels: [bug]
+assignees: ''
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        > **填写说明**：请尽量详细，尤其是「复现步骤」和「实际/预期行为」。
+        > 贴代码/日志时请用 ```代码块``` 包裹，并**删除敏感信息**（Token、密码、真实数据）。
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 影响范围
+      description: 这个 bug 出在哪个模块？
+      options:
+        - 后端（Spring Boot / Java）
+        - 前端（React / TypeScript）
+        - 数据库 / SQL
+        - 缓存（Redis）
+        - 搜索（ElasticSearch）
+        - 认证 / 安全（JWT / Spring Security）
+        - 文件上传
+        - Docker / 部署
+        - 测试 / CI
+
+  - type: input
+    id: version
+    attributes:
+      label: 项目版本
+      description: 你在使用哪个版本？
+      placeholder: "例如 v1.0.0 / commit abc1234"
+
+  - type: dropdown
+    id: environment
+    attributes:
+      label: 运行环境
+      description: Bug 出现在哪个环境？
+      options:
+        - 本地开发（dev）
+        - 测试 / 预发布
+        - 生产环境
+        - 不确定
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: 复现步骤
+      description: 一步步描述如何复现这个 bug
+      placeholder: |
+        1. 打开页面 / 执行命令 '...'
+        2. 点击按钮 / 发送请求 '...'
+        3. 观察到 '...'
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+      description: 你认为正确的结果应该是什么？
+      validations:
+        required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+      description: 实际发生了什么？贴错误日志 / 截图 / 堆栈
+      placeholder: |
+        控制台报错：
+        ```
+        java.lang.NullPointerException at ...
+        ```
+        或：
+        ```
+        HTTP 500 {"message":"服务器内部错误"}
+        ```
+    validations:
+      required: true
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 额外上下文（可选）
+      description: 相关代码片段、截图、最小复现仓库等

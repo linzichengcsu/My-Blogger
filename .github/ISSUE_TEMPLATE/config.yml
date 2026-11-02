@@ -1,0 +1,8 @@
+# ISSUE 模板入口配置
+# https://docs.github.com/en/communities/using-templates-to-encourage-useful-issues-and-pull-requests/configuring-issue-templates-for-your-repository
+
+blank_issues_enabled: true
+contact_links:
+  - name: 安全漏洞报告
+    url: https://github.com/linzichengcsu/My-Personal-Blogger/security/policy
+    about: 发现安全问题请不要在公开 issue 中报告，遵循 SECURITY.md 的流程

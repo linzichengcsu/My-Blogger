@@ -1,0 +1,34 @@
+name: ❓ 问题 / 讨论
+description: 对项目架构、设计决策、使用方式有疑问
+labels: [question]
+assignees: ''
+
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: 你的问题
+      description: 清晰描述你想了解什么
+      placeholder: |
+        - 为什么 Redis 缓存要设计成可开关？
+        - 前端为什么不用 Zustand / Redux 而用 React Context？
+    validations:
+      required: true
+
+  - type: dropdown
+    id: area
+    attributes:
+      label: 话题领域
+      options:
+        - 架构 / 设计决策
+        - API 设计
+        - 前端技术选型
+        - 部署 / 运维
+        - 贡献方式
+        - 其他
+
+  - type: textarea
+    id: context
+    attributes:
+      label: 相关上下文（可选）
+      description: 贴相关的代码、Issue、文档链接等
