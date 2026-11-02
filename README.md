@@ -1,15 +1,15 @@
-# Bard-Blogger 📝
+# 行吟博客 📝
 
-[![JDK](https://img.shields.io/badge/JDK-23-orange)](https://www.oracle.com/java/)
+[![JDK](https://img.shields.io/badge/JDK-21-orange)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)](https://spring.io/projects/spring-boot)
 [![MySQL](https://img.shields.io/badge/MySQL-9.7-%23007396)](https://www.mysql.com/)
-[![React](https://img.shields.io/badge/React-18.2.0-blue)](https://reactjs.org/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5.3.3-blue)](https://www.typescriptlang.org/)
-[![Redis](https://img.shields.io/badge/Redis-7.0-%23ea527f)](https://redis.io/)
+[![React](https://img.shields.io/badge/React-19-blue)](https://react.dev/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue)](https://www.typescriptlang.org/)
+[![Redis](https://img.shields.io/badge/Redis-7.4-%23ea527f)](https://redis.io/)
 [![ElasticSearch](https://img.shields.io/badge/ElasticSearch-9.4.5-%230057b7)](https://www.elastic.co/cn/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 18.2.0** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
+行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 19** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
 
 > **当前进度**：进行生产环境部署，将Redis和ElasticSearch以低耦合、可降级方式集成到业务逻辑中。
 > **下一步开发规划**：考察微博、CSDN、掘金等博客类平台的功能，前后端同步调整代码。
@@ -68,13 +68,13 @@
 
 | 类别      | 技术                                                             |
 |---------|----------------------------------------------------------------|
-| 语言 / 框架 | Java 23、Spring Boot 4.1.1                                      |
+| 语言 / 框架 | Java 21、Spring Boot 4.1.1                                      |
 | 持久层     | Spring Data JPA (Hibernate 6)、Flyway                           |
 | 数据库     | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）                           |
 | 安全      | Spring Security、JJWT 0.12.3、BCrypt                             |
 | 中间件     | Flyway、HikariCP、Actuator、Prometheus、ElasticSearch              |
-| 接口文档    | springdoc-openapi 2.5.0（Swagger UI）                            |
-| 前端模板    | React + TypeScript + Vite                                      |
+| 接口文档    | springdoc-openapi 3.1.1（Swagger UI）                            |
+| 前端模板    | React 19 + TypeScript 5.7 + Vite 6                              |
 | 其他      | Lombok、AOP、Actuator、CommonMark、commons-lang3                   |
 | 测试      | JUnit 5、Mockito、AssertJ、Spring Boot Test、Testcontainers、Docker |
 
@@ -86,13 +86,13 @@
 
 | 依赖      | 版本 |
 |---------|---|
-| JDK     | 23 |
-| Maven   | 3.8+ |
+| JDK     | 21 |
+| Maven   | 3.9+ |
 | MySQL   | 8.0+ |
 | Redis   | 6.0+（Docker 亦可） |
-| Node.js | 18.0+ |
-| pnpm    | 7.0+ |
-| React   | 18.2.0 |
+| Node.js | 20.0+ |
+| pnpm    | 9.0+ |
+| React   | 19 |
 | ElasticSearch | 9.4.5 |
 
 
@@ -292,7 +292,7 @@ frontend/src\
 
 | 问题              | 现状与影响                              | 解决规划 | 优先级 |
 |-----------------|------------------------------------|---|---|
-| 文件存储绑定本地磁盘      | 单机存储，不利于水平扩展与备份                    | 抽象存储接口（当前本地实现），预留对象存储（OSS/S3）切换 | P3 |
+| 文件存储绑定本地磁盘（已解决）      | 单机存储，不利于水平扩展与备份                    | 抽象存储接口（当前本地实现），预留对象存储（OSS/S3）切换 | P3 |
 
 
 ---

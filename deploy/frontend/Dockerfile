@@ -7,6 +7,7 @@ RUN corepack enable
 COPY frontend/package.json frontend/pnpm-lock.yaml frontend/pnpm-workspace.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY frontend/ .
+# request.ts 默认 baseURL 就是 '/api'，这里显式注入防止误读开发态 .env.development
 ARG VITE_API_BASE_URL=/api
 ENV VITE_API_BASE_URL=${VITE_API_BASE_URL}
 RUN pnpm build

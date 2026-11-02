@@ -14,8 +14,9 @@ RUN --mount=type=cache,target=/root/.m2 \
     mvn -B -q clean package -DskipTests
 
 # 解出运行目录：Spring Boot 4 已移除 layertools jarmode，改用 tools（瘦 jar + lib/ 布局）
+# pom.xml 中 <finalName> 已固定为 blog，故 jar 文件名始终为 blog.jar
 WORKDIR /build/target
-RUN java -Djarmode=tools -jar blog-0.0.1-SNAPSHOT.jar extract --destination /build/application
+RUN java -Djarmode=tools -jar blog.jar extract --destination /build/application
 
 # ---------- 运行阶段 ----------
 FROM eclipse-temurin:21-jre-jammy
@@ -34,4 +35,4 @@ COPY --from=build --chown=appuser:appuser /build/application/ ./
 USER appuser
 EXPOSE 8080
 # JVM 按容器内存限额自适应；JAVA_OPTS 可在 compose 中追加
-ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -jar blog-0.0.1-SNAPSHOT.jar"]
+ENTRYPOINT ["sh","-c","exec java $JAVA_OPTS -jar blog.jar"]

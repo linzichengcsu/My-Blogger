@@ -11,11 +11,11 @@
 		<relativePath/>
 	</parent>
 
-	<groupId>com.example</groupId>
+	<groupId>io.github.linzichengcsu</groupId>
 	<artifactId>blog</artifactId>
-	<version>0.0.1-SNAPSHOT</version>
-	<name>personal-blog</name>
-	<description>Personal Blog System</description>
+	<version>1.0.0</version>
+	<name>xingyin-blog</name>
+	<description>行吟博客 —— 基于 Spring Boot 4 与 React 19 构建的个人博客系统</description>
 
 	<properties>
 		<java.version>21</java.version>
@@ -221,6 +221,7 @@
     </dependencies>
 
 	<build>
+		<finalName>blog</finalName>
 		<plugins>
 			<plugin>
 				<groupId>org.springframework.boot</groupId>

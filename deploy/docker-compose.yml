@@ -1,4 +1,4 @@
-﻿# Docker Compose v2（compose spec，无需 version 字段）
+# Docker Compose v2（compose spec，无需 version 字段）
 name: personal-blogger
 
 services:
@@ -93,6 +93,14 @@ services:
       ELASTICSEARCH_PASSWORD: ${ELASTICSEARCH_PASSWORD:-}
       # 首次部署/索引损坏时在 .env 置 true，日志确认回灌完成后改回 false 重启
       APP_SEARCH_ELASTICSEARCH_REINDEX_ON_STARTUP: ${REINDEX_ON_STARTUP:-false}
+      # 轻量级 SMTP 邮件服务（忘记密码验证码）
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-25}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      SMTP_SSL_ENABLE: ${SMTP_SSL_ENABLE:-false}
+      SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS_ENABLE:-false}
       JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
     volumes:
       - uploads:/var/www/uploads    # 用户上传图片，删容器不丢
