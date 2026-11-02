@@ -3,6 +3,7 @@
 ## ✅ PR Checklist
 
 - [ ] 我读了 [CONTRIBUTING.md](https://github.com/linzichengcsu/My-Personal-Blogger/blob/main/CONTRIBUTING.md)
+- [ ] PR 目标分支正确：日常改动 → `develop`；发布或紧急修复 → `main`
 - [ ] 代码在本地通过了 `mvn verify`（后端）或 `npm run build && npm run test:run`（前端）
 - [ ] 新增 / 修改的代码有对应的单元测试
 - [ ] 提交信息符合 Conventional Commits 规范（`feat:` / `fix:` / `refactor:` 等）
