@@ -8,11 +8,13 @@
 [![Redis](https://img.shields.io/badge/Redis-7.4-%23ea527f)](https://redis.io/)
 [![ElasticSearch](https://img.shields.io/badge/ElasticSearch-9.4.5-%230057b7)](https://www.elastic.co/cn/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Release](https://img.shields.io/badge/release-v1.0.0-green)](https://github.com/linzichengcsu/My-Blogger/releases)
+[![CI](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml/badge.svg)](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml)
 
 行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 19** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
 
-> **当前进度**：进行生产环境部署，将Redis和ElasticSearch以低耦合、可降级方式集成到业务逻辑中。
-> **下一步开发规划**：考察微博、CSDN、掘金等博客类平台的功能，前后端同步调整代码。
+> **当前状态**：✅ v1.0.0 已公开发布，支持生产环境 Docker 部署。
+> **下一步规划**：考察微博、CSDN、掘金等博客类平台的功能，前后端同步调整代码。
 
 ---
 
@@ -307,6 +309,7 @@ frontend/src\
 - 9月22日：在GitHub Action中添加基于前后端自动化测试的CI流水线
 - 10月10日：进行了全面的慢SQL排查与优化，系统响应速度提升明显
 - 10月15日：完成了项目主体的Docker镜像部署和容器化，确保了项目的一致性和可移植性
+- 11月3日：补齐社区文档（CODE_OF_CONDUCT / SECURITY / CONTRIBUTING）、配置分支保护规则与安全扫描（Dependabot + Secret scanning），加固开发环境 JWT 密钥配置，正式发布 v1.0.0
 
 ## 🐞 已知问题及解决规划
 
