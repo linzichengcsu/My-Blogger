@@ -1,5 +1,8 @@
 # 行吟博客 📝
 
+> ”心怀热诚，再次一路行吟。“
+> ——2026年3月22日，开发者的20岁生日
+
 [![JDK](https://img.shields.io/badge/JDK-21-orange)](https://www.oracle.com/java/)
 [![Spring Boot](https://img.shields.io/badge/Spring%20Boot-4.1.1-brightgreen)](https://spring.io/projects/spring-boot)
 [![MySQL](https://img.shields.io/badge/MySQL-9.7-%23007396)](https://www.mysql.com/)
@@ -326,4 +329,4 @@ frontend/src\
 
 ## 声明
 - 部分Agent Skill脚本来自知名开源库[InterviewGuide](https://github.com/Snailclimb/interview-guide)
-- 前端Component层使用了Ant Design等成熟的开源设计
+- 前端Component层使用了Ant Design等成熟的开源设计框架，确保了跨平台的用户体验
