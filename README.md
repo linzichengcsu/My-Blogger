@@ -11,7 +11,7 @@
 [![Redis](https://img.shields.io/badge/Redis-7.4-%23ea527f)](https://redis.io/)
 [![ElasticSearch](https://img.shields.io/badge/ElasticSearch-9.4.5-%230057b7)](https://www.elastic.co/cn/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.0-green)](https://github.com/linzichengcsu/My-Blogger/releases)
+[![Release](https://img.shields.io/badge/release-v1.0.1-green)](https://github.com/linzichengcsu/My-Blogger/releases)
 [![CI](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml/badge.svg)](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml)
 
 行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 19** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
@@ -319,6 +319,7 @@ frontend/src\
 | 问题              | 现状与影响                              | 解决规划 | 优先级 |
 |-----------------|------------------------------------|---|---|
 | 文件存储绑定本地磁盘（已解决）      | 单机存储，不利于水平扩展与备份                    | 抽象存储接口（当前本地实现），预留对象存储（OSS/S3）切换 | P3 |
+| 状态管理问题 | 数据在前端的状态管理问题，导致前端出现较多的业务逻辑缺陷（如已删除或已归档的文章仍能显示在首页）| 逐步优化状态管理与展示逻辑 | P1 |
 
 
 ---
