@@ -25,6 +25,15 @@ describe('MarkdownView', () => {
     expect(container.textContent).toBe('')
   })
 
+  it('单个换行渲染为 <br>（诗歌逐行排版）', () => {
+    const { container } = render(<MarkdownView content={'床前明月光\n疑是地上霜'} />)
+
+    const p = container.querySelector('.markdown-body p')
+    expect(p?.querySelector('br')).toBeInTheDocument()
+    expect(p?.textContent).toContain('床前明月光')
+    expect(p?.textContent).toContain('疑是地上霜')
+  })
+
   it('渲染行内代码与链接', () => {
     render(<MarkdownView content={'使用 `pnpm test`，详见 [文档](https://example.com)'} />)
 

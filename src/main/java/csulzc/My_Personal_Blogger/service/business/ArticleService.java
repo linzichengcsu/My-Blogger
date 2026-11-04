@@ -14,6 +14,7 @@ import csulzc.My_Personal_Blogger.service.infrastructure.ArticleStatService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.cache.annotation.Caching;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -87,7 +88,11 @@ public class ArticleService {
     /**
      * 更新文章
      */
-    @CacheEvict(cacheNames = "article:detail", key = "#articleId")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "article:detail", key = "#articleId"),
+            // 列表缓存（主页 / 作者列表）同步失效，否则标题、摘要等修改最长滞后一个 TTL
+            @CacheEvict(cacheNames = "article:list", allEntries = true)
+    })
     @Transactional(timeout = 30)
     public ArticleDetailDTO updateArticle(Long articleId, @Valid ArticleUpdateRequest request) {
         Article article = articleRepository.findById(articleId)
@@ -145,7 +150,11 @@ public class ArticleService {
     /**
      * 发布文章（将状态改为 RELEASE）
      */
-    @CacheEvict(cacheNames = "article:detail", key = "#articleId")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "article:detail", key = "#articleId"),
+            // 列表只含 RELEASE 文章，发布/状态变化必须让列表缓存失效
+            @CacheEvict(cacheNames = "article:list", allEntries = true)
+    })
     @Transactional(timeout = 30)
     public ArticleDetailDTO publishArticle(Long articleId) {
         Article article = articleRepository.findById(articleId)
@@ -169,7 +178,11 @@ public class ArticleService {
     /**
      * 归档文章
      */
-    @CacheEvict(cacheNames = "article:detail", key = "#articleId")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "article:detail", key = "#articleId"),
+            // 归档后文章不应再出现在主页/作者列表，必须失效列表缓存
+            @CacheEvict(cacheNames = "article:list", allEntries = true)
+    })
     @Transactional(timeout = 30)
     public ArticleDetailDTO archiveArticle(Long articleId) {
         Article article = articleRepository.findById(articleId)
@@ -247,7 +260,11 @@ public class ArticleService {
     /**
      * 删除文章（先批量清理分类关联与评论，再删除文章本身，避免 JPA 级联逐条删除）
      */
-    @CacheEvict(cacheNames = "article:detail", key = "#articleId")
+    @Caching(evict = {
+            @CacheEvict(cacheNames = "article:detail", key = "#articleId"),
+            // 删除后文章不应再出现在任何列表，必须失效列表缓存
+            @CacheEvict(cacheNames = "article:list", allEntries = true)
+    })
     @Transactional(timeout = 30)
     public void deleteArticle(Long articleId) {
         Article article = articleRepository.findById(articleId)
@@ -385,6 +402,8 @@ public class ArticleService {
     private ArticleDetailDTO convertToDetailDTO(Article article) {
         return ArticleDetailDTO.builder()
                 .id(article.getId())
+                .createdAt(article.getCreatedAt())
+                .updatedAt(article.getUpdatedAt())
                 .title(article.getTitle())
                 .content(article.getContent())
                 .summary(article.getSummary())

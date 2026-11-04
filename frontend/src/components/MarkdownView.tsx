@@ -4,11 +4,13 @@
  */
 import ReactMarkdown from 'react-markdown'
 import remarkGfm from 'remark-gfm'
+import remarkBreaks from 'remark-breaks'
 
 export default function MarkdownView({ content }: { content?: string }) {
   return (
     <div className="markdown-body">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content || ''}</ReactMarkdown>
+      {/* remark-breaks：把单个换行渲染为 <br>，保留诗歌等逐行排版 */}
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkBreaks]}>{content || ''}</ReactMarkdown>
     </div>
   )
 }

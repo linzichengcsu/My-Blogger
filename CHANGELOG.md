@@ -98,3 +98,8 @@
 ---
 
 [1.0.0]: https://github.com/linzichengcsu/My-Personal-Blogger/releases/tag/v1.0.0
+
+## [1.0.1] - 2026-11-03
+
+### 🐛 已修复的重要问题
+修复了项目`docker compose build`因 pnpm 到 npm 的迁移未能及时同步到`docker-compose.yml`导致的构建失败的问题

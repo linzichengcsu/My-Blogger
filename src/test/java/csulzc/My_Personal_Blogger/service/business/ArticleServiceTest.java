@@ -310,6 +310,9 @@ public class ArticleServiceTest {
         assertNotNull(result);
         assertEquals("测试文章", result.getTitle());
         assertEquals(testUserId, result.getAuthor().getId());
+        // 详情 DTO 必须携带创建/更新时间，否则前端详情页「发布于」只能渲染占位符
+        assertNotNull(result.getCreatedAt());
+        assertNotNull(result.getUpdatedAt());
     }
 
     @Test
