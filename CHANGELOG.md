@@ -98,3 +98,17 @@
 ---
 
 [1.0.0]: https://github.com/linzichengcsu/My-Personal-Blogger/releases/tag/v1.0.0
+
+## [1.0.1] - 2026-11-03
+
+### 🐛 已修复的重要问题
+修复了项目`docker compose build`因 pnpm 到 npm 的迁移未能及时同步到`docker-compose.yml`导致的构建失败的问题
+
+## [1.0.2] - 2026-11-05
+
+### 🐛 已修复的重要问题
+- 修复了前端文章内容输入框点单词回车会吞掉换行符的问题
+- 修复了缓存驱逐策略错误导致的前端已被删除或归档的文章错误地显示在主页的问题
+
+### 📖 新增文档
+- 增加了适合非技术背景用户快速一键启动的说明文档`QUICK_START_FOR_BEGINNERS.md`，位于根目录下
