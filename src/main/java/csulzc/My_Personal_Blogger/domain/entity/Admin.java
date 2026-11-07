@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @NoArgsConstructor
@@ -38,7 +38,7 @@ public class Admin extends BaseEntity {
     @Builder.Default
     private Boolean isActive = true;
 
-    private LocalDateTime lastLoginAt;
+    private Instant lastLoginAt;
 
     private String bio;
 

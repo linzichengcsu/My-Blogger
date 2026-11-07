@@ -7,7 +7,7 @@ import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 import lombok.EqualsAndHashCode;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -26,6 +26,6 @@ public class CommentDTO extends BaseDTO {
     private Integer replyCount;
     private List<CommentDTO> replies;  // 回复列表（懒加载）
     private Integer likeCount;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private Boolean isLiked;
 }

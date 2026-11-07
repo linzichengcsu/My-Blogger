@@ -15,6 +15,9 @@ spring:
         jdbc:
           batch_size: 30
           batch_versioned_data: true
+          # 统一以 UTC 读写时间列：实体字段为 Instant，存 DATETIME 时按 UTC 解释，
+          # Jackson 输出带 Z 的 ISO 串，前端按本地时区展示，彻底消除时区歧义
+          time_zone: UTC
         order_inserts: true
         order_updates: true
         generate_statistics: true

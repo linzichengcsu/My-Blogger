@@ -24,7 +24,8 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -901,7 +902,7 @@ public class UserServiceTest {
                 .username("user1")
                 .email("user1@example.com")
                 .passwordHash(passwordEncoder.encode("password123"))
-                .lastLoginAt(LocalDateTime.now().minusDays(1))
+                .lastLoginAt(Instant.now().minus(1, ChronoUnit.DAYS))
                 .status(User.UserStatus.ACTIVE)
                 .build();
         entityManager.persist(user1);
@@ -910,7 +911,7 @@ public class UserServiceTest {
                 .username("user2")
                 .email("user2@example.com")
                 .passwordHash(passwordEncoder.encode("password123"))
-                .lastLoginAt(LocalDateTime.now())
+                .lastLoginAt(Instant.now())
                 .status(User.UserStatus.ACTIVE)
                 .build();
         entityManager.persist(user2);

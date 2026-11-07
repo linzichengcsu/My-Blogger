@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Date;
 
@@ -31,9 +31,9 @@ public class User extends BaseEntity
     @Transient
     private String plainPassword;
 
-    private LocalDateTime passwordUpdatedAt = LocalDateTime.now();
+    private Instant passwordUpdatedAt = Instant.now();
 
-    private LocalDateTime lastLoginAt;
+    private Instant lastLoginAt;
 
     @Column(nullable = false, unique = true)
     private String email;

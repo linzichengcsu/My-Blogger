@@ -2,6 +2,7 @@ package csulzc.My_Personal_Blogger.service.business;
 
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.api.dto.user.*;
+import csulzc.My_Personal_Blogger.api.dto.utils.DateTimeUtils;
 import csulzc.My_Personal_Blogger.domain.entity.User;
 import csulzc.My_Personal_Blogger.repository.ArticleRepository;
 import csulzc.My_Personal_Blogger.repository.CommentRepository;
@@ -25,7 +26,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
-import java.time.LocalDateTime;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -145,7 +145,7 @@ public class UserService {
         loginAttemptService.recordSuccess(request.getUsername());
 
         // 更新最后登录时间
-        user.setLastLoginAt(LocalDateTime.now());
+        user.setLastLoginAt(DateTimeUtils.now());
         User updatedUser = userRepository.save(user);
 
         // 生成Token（包含角色信息）；勾选「7天免登录」时签发 168h 长效 token
@@ -341,7 +341,7 @@ public class UserService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setPasswordUpdatedAt(LocalDateTime.now());
+        user.setPasswordUpdatedAt(DateTimeUtils.now());
         userRepository.save(user);
         banUserTokens(user.getId());
     }
@@ -371,7 +371,7 @@ public class UserService {
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setPasswordUpdatedAt(LocalDateTime.now());
+        user.setPasswordUpdatedAt(DateTimeUtils.now());
         userRepository.save(user);
     }
 
@@ -385,7 +385,7 @@ public class UserService {
                 .orElseThrow(() -> new EntityNotFoundException("用户不存在"));
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        user.setPasswordUpdatedAt(LocalDateTime.now());
+        user.setPasswordUpdatedAt(DateTimeUtils.now());
         userRepository.save(user);
     }
 

@@ -1,5 +1,6 @@
 package csulzc.My_Personal_Blogger.service.infrastructure;
 
+import csulzc.My_Personal_Blogger.api.dto.utils.DateTimeUtils;
 import csulzc.My_Personal_Blogger.config.ArticleStatProperties;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -10,7 +11,6 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -131,7 +131,7 @@ public class ArticleStatFlushScheduler {
             if (!existingArticleIds.contains(entry.getKey())) {
                 continue;
             }
-            LocalDateTime now = LocalDateTime.now();
+            var now = DateTimeUtils.now();
             for (Long userId : entry.getValue()) {
                 insertParams.add(new MapSqlParameterSource()
                         .addValue("articleId", entry.getKey())

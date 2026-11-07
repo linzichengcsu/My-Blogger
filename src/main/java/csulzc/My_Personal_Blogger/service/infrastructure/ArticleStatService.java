@@ -1,5 +1,6 @@
 package csulzc.My_Personal_Blogger.service.infrastructure;
 
+import csulzc.My_Personal_Blogger.api.dto.utils.DateTimeUtils;
 import csulzc.My_Personal_Blogger.config.ArticleStatProperties;
 import csulzc.My_Personal_Blogger.repository.ArticleLikeRepository;
 import csulzc.My_Personal_Blogger.repository.ArticleRepository;
@@ -11,7 +12,6 @@ import org.springframework.data.redis.core.script.DefaultRedisScript;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
@@ -138,7 +138,7 @@ public class ArticleStatService {
             if (!articleRepository.existsById(articleId)) {
                 return false;
             }
-            int inserted = articleLikeRepository.insertIgnore(articleId, userId, LocalDateTime.now());
+            int inserted = articleLikeRepository.insertIgnore(articleId, userId, DateTimeUtils.now());
             if (inserted > 0) {
                 articleRepository.incrementLikeCount(articleId);
                 return true;

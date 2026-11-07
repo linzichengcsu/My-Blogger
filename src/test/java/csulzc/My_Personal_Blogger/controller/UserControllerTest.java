@@ -26,7 +26,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -114,9 +114,9 @@ class UserControllerTest {
                 .bio("这是测试用户的简介")
                 .avatar("https://example.com/avatar.jpg")
                 .status(csulzc.My_Personal_Blogger.domain.entity.User.UserStatus.ACTIVE)
-                .lastLoginAt(LocalDateTime.now())
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .lastLoginAt(Instant.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .articleCount(5L)
                 .commentCount(10L)
                 .favoriteCount(3L)
@@ -128,7 +128,7 @@ class UserControllerTest {
                 .displayName("测试用户")
                 .bio("这是测试用户的简介")
                 .avatar("https://example.com/avatar.jpg")
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .articleCount(5L)
                 .commentCount(10L)
                 .build();
@@ -139,7 +139,7 @@ class UserControllerTest {
                 .articleCount(5L)
                 .commentCount(10L)
                 .likeReceived(20L)
-                .lastActiveAt(LocalDateTime.now())
+                .lastActiveAt(Instant.now())
                 .build();
 
         loginResponseDTO = LoginResponseDTO.builder()
@@ -357,8 +357,8 @@ class UserControllerTest {
                 .bio("更新后的简介")
                 .avatar("https://example.com/new-avatar.jpg")
                 .status(csulzc.My_Personal_Blogger.domain.entity.User.UserStatus.ACTIVE)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         given(userService.updateUser(eq(userId), any(UserUpdateRequest.class)))
@@ -841,8 +841,8 @@ class UserControllerTest {
                 .bio("更新后的简介")
                 .avatar("https://example.com/new-avatar.jpg")
                 .status(csulzc.My_Personal_Blogger.domain.entity.User.UserStatus.ACTIVE)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         given(securityContextUtil.getCurrentUserId()).willReturn(currentUserId);

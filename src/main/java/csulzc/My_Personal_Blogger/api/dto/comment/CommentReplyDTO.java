@@ -5,7 +5,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * 评论回复DTO（扁平化结构）
@@ -18,5 +18,5 @@ public class CommentReplyDTO {
     private String content;
     private UserProfileDTO commenter;
     private UserProfileDTO replyToUser;  // 回复给谁
-    private LocalDateTime createdAt;
+    private Instant createdAt;
 }
