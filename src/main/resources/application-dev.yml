@@ -50,6 +50,8 @@ spring:
     uris: ${ELASTICSEARCH_URIS:http://localhost:9200}
     connection-timeout: 2s
     socket-timeout: 10s
+
+app:
   # 邮件服务（忘记密码验证码）
   # 轻量级 SMTP 实现，不依赖 spring-boot-starter-mail
   # 启用方式：通过环境变量注入 SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM
@@ -57,16 +59,15 @@ spring:
   #   QQ/163  : 465 (SSL)，SMTP_SSL_ENABLE=true
   #   Gmail   : 587 (STARTTLS)，SMTP_STARTTLS_ENABLE=true
   #   自建 SMTP: 按需配置
-  # app.smtp:
-  #   host: ${SMTP_HOST:}
-  #   port: ${SMTP_PORT:25}
-  #   username: ${SMTP_USERNAME:}
-  #   password: ${SMTP_PASSWORD:}
-  #   from: ${SMTP_FROM:noreply@example.com}
-  #   ssl-enable: ${SMTP_SSL_ENABLE:false}
-  #   starttls-enable: ${SMTP_STARTTLS_ENABLE:false}
-
-app:
+  smtp:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:25}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    from: ${SMTP_FROM:noreply@example.com}
+    from-name: ${SMTP_FROM_NAME:行吟博客}
+    ssl-enable: ${SMTP_SSL_ENABLE:false}
+    starttls-enable: ${SMTP_STARTTLS_ENABLE:false}
   login-protection:
     enabled: true
   password-reset:

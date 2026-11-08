@@ -46,6 +46,10 @@ public class LightweightMailService {
     @Value("${app.smtp.from:noreply@example.com}")
     private String from;
 
+    /** 发件人显示名（非 ASCII 时按 RFC 2047 Base64 编码）；为空则只显示纯邮箱地址 */
+    @Value("${app.smtp.from-name:}")
+    private String fromName;
+
     @Value("${app.smtp.ssl-enable:false}")
     private boolean sslEnable;
 
@@ -110,7 +114,11 @@ public class LightweightMailService {
      * 构建标准 MIME 邮件内容。
      */
     private String buildMimeMessage(String to, String subject, String body) {
-        return "From: " + from + "\r\n"
+        // 显示名按 RFC 2047 编码，避免非 ASCII/空格导致地址解析异常；地址保持纯邮箱
+        String fromHeader = (fromName == null || fromName.isBlank())
+                ? from
+                : "=?UTF-8?B?" + Base64.getEncoder().encodeToString(fromName.getBytes(StandardCharsets.UTF_8)) + "?= <" + from + ">";
+        return "From: " + fromHeader + "\r\n"
                 + "To: " + to + "\r\n"
                 + "Subject: =?UTF-8?B?" + Base64.getEncoder().encodeToString(subject.getBytes(StandardCharsets.UTF_8)) + "?=\r\n"
                 + "MIME-Version: 1.0\r\n"

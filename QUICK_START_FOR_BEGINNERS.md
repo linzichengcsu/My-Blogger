@@ -44,7 +44,7 @@ Docker 会把后端、前端、MySQL、Redis、搜索服务**一次性装好并�
 
 ### 第 2 步：一条命令启动全部
 
-打开终端（Windows 用 PowerShell），进入项目的 `deploy` 目录，运行：
+打开终端（Windows 用 PowerShell、macOS 用 Terminal），进入项目的 `deploy` 目录，运行：
 
 ```powershell
 cd deploy

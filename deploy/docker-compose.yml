@@ -66,6 +66,17 @@ services:
     networks: [blognet]
     # ports: ["127.0.0.1:9200:9200"]
 
+  # 自建本地 SMTP 引擎：捕获所有外发邮件，无需真实邮箱（开发/演示用）
+  #   SMTP 端口 1025（后端连此），Web 收件箱 8025（浏览器查看验证码）
+  #   仅绑定 127.0.0.1，不对公网开放
+  mailhog:
+    image: mailhog/mailhog:latest
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:1025:1025"
+      - "127.0.0.1:8025:8025"
+    networks: [blognet]
+
   blog:
     build:
       context: ..                # 后端构建上下文是项目根（需要 pom.xml 与 src/）
@@ -76,6 +87,7 @@ services:
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
       es:    { condition: service_healthy }
+      mailhog: { condition: service_started }
     environment:
       SPRING_PROFILES_ACTIVE: prod
       # —— 覆盖 application-prod.yml 中写死的 localhost + requireSSL 的整条 URL ——
@@ -94,11 +106,13 @@ services:
       # 首次部署/索引损坏时在 .env 置 true，日志确认回灌完成后改回 false 重启
       APP_SEARCH_ELASTICSEARCH_REINDEX_ON_STARTUP: ${REINDEX_ON_STARTUP:-false}
       # 轻量级 SMTP 邮件服务（忘记密码验证码）
-      SMTP_HOST: ${SMTP_HOST:-}
-      SMTP_PORT: ${SMTP_PORT:-25}
+      # 默认连本 compose 内的 mailhog 服务；.env 覆盖后可切换为真实邮箱
+      SMTP_HOST: ${SMTP_HOST:-mailhog}
+      SMTP_PORT: ${SMTP_PORT:-1025}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       SMTP_FROM: ${SMTP_FROM:-noreply@example.com}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-行吟博客}
       SMTP_SSL_ENABLE: ${SMTP_SSL_ENABLE:-false}
       SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS_ENABLE:-false}
       JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
@@ -112,6 +126,10 @@ services:
       retries: 10
       start_period: 60s             # 留给 Flyway 迁移 + ES 索引初始化
     networks: [blognet]
+    deploy:
+      resources:
+        limits:
+          memory: 2g
 
   web:
     build:
