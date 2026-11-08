@@ -10,7 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.*;
@@ -92,7 +92,7 @@ class ArticleRepositoryTest {
 
         // When - 执行操作
         Article saved = articleRepository.save(newArticle);
-        saved.setUpdatedAt(LocalDateTime.now());
+        saved.setUpdatedAt(Instant.now());
 
         // Then - 验证结果
         assertNotNull(saved.getId());
@@ -136,7 +136,7 @@ class ArticleRepositoryTest {
         testArticle.setTitle("更新后的标题");
         testArticle.setContent("更新后的内容");
         testArticle.setStatus(Article.ArticleStatus.RELEASE);
-        testArticle.setUpdatedAt(LocalDateTime.now());
+        testArticle.setUpdatedAt(Instant.now());
 
         // When
         Article updated = articleRepository.save(testArticle);
@@ -182,7 +182,10 @@ class ArticleRepositoryTest {
         entityManager.flush();
 
         // When - 分页查询（第1页，每页3条）
-        PageRequest pageable = PageRequest.of(0, 3, Sort.by("createdAt").descending());
+        // 次级排序按 id 降序：循环内创建的文章 createdAt 可能相同（Instant.now() 亚毫秒级），
+        // 仅按 createdAt 排序结果不确定；加 id 降序保证后创建（id 更大）的文章稳定排在前面。
+        PageRequest pageable = PageRequest.of(0, 3,
+                Sort.by("createdAt").descending().and(Sort.by("id").descending()));
         Page<Article> page = articleRepository.findByAuthor(testAuthor, pageable);
 
         // Then

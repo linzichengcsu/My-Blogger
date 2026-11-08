@@ -7,7 +7,7 @@ import lombok.experimental.SuperBuilder;
 import lombok.EqualsAndHashCode;
 import csulzc.My_Personal_Blogger.domain.entity.User;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @SuperBuilder
@@ -22,9 +22,9 @@ public class UserDetailDTO extends BaseDTO {
     private String bio;
     private User.UserStatus status;
     private User.UserRole role;
-    private LocalDateTime lastLoginAt;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant lastLoginAt;
+    private Instant createdAt;
+    private Instant updatedAt;
     private Long articleCount;
     private Long commentCount;
     private Long favoriteCount;

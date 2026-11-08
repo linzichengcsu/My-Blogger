@@ -4,7 +4,7 @@ import lombok.Data;
 import lombok.experimental.SuperBuilder;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 /**
  * 基础DTO，包含通用字段
@@ -14,6 +14,6 @@ import java.time.LocalDateTime;
 @NoArgsConstructor
 public abstract class BaseDTO {
     private Long id;
-    private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
+    private Instant createdAt;
+    private Instant updatedAt;
 }

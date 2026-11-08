@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -30,7 +30,7 @@ public interface ArticleRepository extends BaseRepository<Article, Long> {
 
     // 4. 复杂查询：发布时间在之后，按点赞数排序
     @Query("SELECT a FROM Article a WHERE a.createdAt >= :since ORDER BY a.likeCount DESC")
-    List<Article> findPopularArticlesSince(@Param("since") LocalDateTime since, Pageable pageable);
+    List<Article> findPopularArticlesSince(@Param("since") Instant since, Pageable pageable);
 
     // 5. 统计某作者的文章数
     long countByAuthor(User author);

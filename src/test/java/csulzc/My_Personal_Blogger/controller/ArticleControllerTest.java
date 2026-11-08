@@ -34,7 +34,7 @@ import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -119,8 +119,8 @@ class ArticleControllerTest {
                 .commentCount(0)
                 .isLiked(false)
                 .isFavorite(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
     }
 
@@ -207,8 +207,8 @@ class ArticleControllerTest {
                 .commentCount(0)
                 .isLiked(false)
                 .isFavorite(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         given(articleService.updateArticle(eq(articleId), any(ArticleUpdateRequest.class)))
@@ -261,8 +261,8 @@ class ArticleControllerTest {
                 .commentCount(0)
                 .isLiked(false)
                 .isFavorite(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         given(articleService.publishArticle(eq(articleId)))
@@ -296,8 +296,8 @@ class ArticleControllerTest {
                 .commentCount(0)
                 .isLiked(false)
                 .isFavorite(false)
-                .createdAt(LocalDateTime.now())
-                .updatedAt(LocalDateTime.now())
+                .createdAt(Instant.now())
+                .updatedAt(Instant.now())
                 .build();
 
         given(articleService.archiveArticle(eq(articleId)))

@@ -20,7 +20,7 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.context.annotation.Import;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -140,7 +140,7 @@ public class ArticleServiceTest {
                         .displayName("测试用户")
                         .avatar("https://example.com/avatar.jpg")
                         .bio("这是测试用户的简介")
-                        .createdAt(LocalDateTime.now())
+                        .createdAt(Instant.now())
                         .articleCount(0L)
                         .followerCount(0L)
                         .build()
@@ -170,7 +170,7 @@ public class ArticleServiceTest {
                         .displayName("测试用户")
                         .avatar("https://example.com/avatar.jpg")
                         .bio("这是测试用户的简介")
-                        .createdAt(LocalDateTime.now())
+                        .createdAt(Instant.now())
                         .articleCount(0L)
                         .followerCount(0L)
                         .build()
@@ -181,7 +181,7 @@ public class ArticleServiceTest {
                         .description("这是测试分类的描述")
                         .build())
                 )
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .likeCount(0)
                 .commentCount(0)
                 .favoriteCount(0)

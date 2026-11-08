@@ -40,17 +40,6 @@ spring:
     password: ${ELASTICSEARCH_PASSWORD:}
     connection-timeout: 3s
     socket-timeout: 10s
-  # 邮件服务（忘记密码验证码）
-  # 轻量级 SMTP 实现，不依赖 spring-boot-starter-mail
-  # 生产环境必须通过环境变量注入 SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM 启用
-  # app.smtp:
-  #   host: ${SMTP_HOST:}
-  #   port: ${SMTP_PORT:25}
-  #   username: ${SMTP_USERNAME:}
-  #   password: ${SMTP_PASSWORD:}
-  #   from: ${SMTP_FROM:noreply@example.com}
-  #   ssl-enable: ${SMTP_SSL_ENABLE:false}
-  #   starttls-enable: ${SMTP_STARTTLS_ENABLE:false}
 
   jpa:
     hibernate:
@@ -72,6 +61,18 @@ spring:
     check-template-location: false   # 无 templates 目录，避免启动告警（与 dev 保持一致）
 
 app:
+  # 邮件服务（忘记密码验证码）
+  # 轻量级 SMTP 实现，不依赖 spring-boot-starter-mail
+  # 生产环境必须通过环境变量注入 SMTP_HOST / SMTP_PORT / SMTP_USERNAME / SMTP_PASSWORD / SMTP_FROM 启用
+  smtp:
+    host: ${SMTP_HOST:}
+    port: ${SMTP_PORT:25}
+    username: ${SMTP_USERNAME:}
+    password: ${SMTP_PASSWORD:}
+    from: ${SMTP_FROM:noreply@example.com}
+    from-name: ${SMTP_FROM_NAME:行吟博客}
+    ssl-enable: ${SMTP_SSL_ENABLE:false}
+    starttls-enable: ${SMTP_STARTTLS_ENABLE:false}
   cache:
     enabled: true
   search:

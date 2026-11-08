@@ -17,7 +17,7 @@ import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.TransactionStatus;
 import org.springframework.transaction.support.TransactionTemplate;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.*;
@@ -85,7 +85,7 @@ class ArticleStatServiceTest {
     void recordLike_fallsBackToDb_whenDisabled() {
         when(properties.isEnabled()).thenReturn(false);
         when(articleRepository.existsById(1L)).thenReturn(true);
-        when(articleLikeRepository.insertIgnore(eq(1L), eq(2L), any(LocalDateTime.class))).thenReturn(1);
+        when(articleLikeRepository.insertIgnore(eq(1L), eq(2L), any(Instant.class))).thenReturn(1);
 
         boolean accepted = service.recordLike(1L, 2L);
 
@@ -98,7 +98,7 @@ class ArticleStatServiceTest {
     void recordLike_duplicateDoesNotIncrement_whenDisabled() {
         when(properties.isEnabled()).thenReturn(false);
         when(articleRepository.existsById(1L)).thenReturn(true);
-        when(articleLikeRepository.insertIgnore(eq(1L), eq(2L), any(LocalDateTime.class))).thenReturn(0);
+        when(articleLikeRepository.insertIgnore(eq(1L), eq(2L), any(Instant.class))).thenReturn(0);
 
         boolean accepted = service.recordLike(1L, 2L);
 
@@ -126,7 +126,7 @@ class ArticleStatServiceTest {
         doThrow(new RuntimeException("redis down"))
                 .when(redis).execute(any(RedisScript.class), anyList(), any(), any(), any(), any());
         when(articleRepository.existsById(1L)).thenReturn(true);
-        when(articleLikeRepository.insertIgnore(eq(1L), eq(2L), any(LocalDateTime.class))).thenReturn(1);
+        when(articleLikeRepository.insertIgnore(eq(1L), eq(2L), any(Instant.class))).thenReturn(1);
 
         boolean accepted = service.recordLike(1L, 2L);
 

@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @SuperBuilder
@@ -16,7 +16,7 @@ public class UserProfileDTO {
     private String displayName;
     private String avatar;  // 头像URL
     private String bio;      // 个人简介
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private Long articleCount;
     private Long commentCount;
     private Long followerCount;

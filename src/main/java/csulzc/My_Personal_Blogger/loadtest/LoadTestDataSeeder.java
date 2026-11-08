@@ -12,7 +12,8 @@ import org.springframework.core.annotation.Order;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -79,7 +80,7 @@ public class LoadTestDataSeeder implements ApplicationRunner {
     }
 
     private List<Long> insertAuthors() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<Object[]> batch = new ArrayList<>(AUTHOR_COUNT);
         for (int i = 1; i <= AUTHOR_COUNT; i++) {
             batch.add(new Object[]{
@@ -99,7 +100,7 @@ public class LoadTestDataSeeder implements ApplicationRunner {
     }
 
     private List<Long> insertCategories(Long ownerId) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         String[] topNames = {"Java", "Spring", "数据库", "中间件", "算法", "架构", "运维", "随笔"};
         String[] topDescs = {"Java 语言相关", "Spring 生态", "数据库与存储", "Redis / MQ 等中间件",
                 "数据结构与算法", "系统架构设计", "部署与运维", "杂谈随笔"};
@@ -130,11 +131,11 @@ public class LoadTestDataSeeder implements ApplicationRunner {
     }
 
     private List<Long> insertArticles(List<Long> authorIds) {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         List<Object[]> batch = new ArrayList<>(articleCount);
         for (int i = 1; i <= articleCount; i++) {
             // 创建时间沿时间轴散开（每篇间隔 7 分钟），避免分页排序时全挤在同一时刻
-            LocalDateTime createdAt = now.minusMinutes((long) i * 7);
+            Instant createdAt = now.minus((long) i * 7, ChronoUnit.MINUTES);
             Long authorId = authorIds.get((i - 1) % authorIds.size());
             batch.add(new Object[]{
                     createdAt, createdAt,

@@ -5,7 +5,7 @@ import lombok.Builder;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @SuperBuilder
@@ -17,5 +17,5 @@ public class UserActivityDTO {
     private Long articleCount;
     private Long commentCount;
     private Long likeReceived;
-    private LocalDateTime lastActiveAt;
+    private Instant lastActiveAt;
 }

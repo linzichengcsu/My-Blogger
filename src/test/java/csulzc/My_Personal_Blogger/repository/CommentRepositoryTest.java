@@ -10,7 +10,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
@@ -106,7 +106,7 @@ public class CommentRepositoryTest {
 
         // When - 执行操作
         Comment saved = commentRepository.save(newComment);
-        saved.setUpdatedAt(LocalDateTime.now());
+        saved.setUpdatedAt(Instant.now());
 
         // Then - 验证结果
         assertNotNull(saved.getId());

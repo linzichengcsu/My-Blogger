@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 @Repository
@@ -24,7 +24,7 @@ public interface ArticleLikeRepository extends JpaRepository<ArticleLike, Long> 
             "VALUES (:articleId, :userId, :createdAt)", nativeQuery = true)
     int insertIgnore(@Param("articleId") Long articleId,
                      @Param("userId") Long userId,
-                     @Param("createdAt") LocalDateTime createdAt);
+                     @Param("createdAt") Instant createdAt);
 
     @Modifying
     @Query(value = "DELETE FROM article_like WHERE article_id = :articleId", nativeQuery = true)

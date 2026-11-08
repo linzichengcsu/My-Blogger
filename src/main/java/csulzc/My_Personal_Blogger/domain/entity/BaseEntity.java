@@ -7,7 +7,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.experimental.SuperBuilder;  // 注意这个
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Arrays;
 
 @Data
@@ -26,19 +26,19 @@ public abstract class BaseEntity {
     private Long version = 0L;
 
     @Column(updatable = false)  // 创建后不可更新
-    protected LocalDateTime createdAt;
+    protected Instant createdAt;
 
-    protected LocalDateTime updatedAt;
+    protected Instant updatedAt;
 
     @PrePersist
     protected void onCreate() {
-        LocalDateTime now = LocalDateTime.now();
+        Instant now = Instant.now();
         createdAt = now;
         updatedAt = now;
     }
 
     @PreUpdate
     protected void onUpdate() {
-        updatedAt = LocalDateTime.now();
+        updatedAt = Instant.now();
     }
 }

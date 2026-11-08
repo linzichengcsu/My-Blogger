@@ -6,7 +6,7 @@ import lombok.NoArgsConstructor;
 import lombok.AllArgsConstructor;
 import org.springframework.data.domain.Page;
 import java.util.List;
-import java.time.LocalDateTime;
+import java.time.Instant;
 
 @Data
 @Builder
@@ -17,14 +17,14 @@ public class ApiResponse<T> {
     private String message;
     private T data;
     private String errorCode;
-    private LocalDateTime timestamp;
+    private Instant timestamp;
 
     public static <T> ApiResponse<T> success(T data) {
         return ApiResponse.<T>builder()
                 .success(true)
                 .message("操作成功")
                 .data(data)
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now())
                 .build();
     }
 
@@ -32,7 +32,7 @@ public class ApiResponse<T> {
         return ApiResponse.<T>builder()
                 .success(false)
                 .message(message)
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now())
                 .build();
     }
 
@@ -41,7 +41,7 @@ public class ApiResponse<T> {
                 .success(false)
                 .message(message)
                 .errorCode(errorCode)
-                .timestamp(LocalDateTime.now())
+                .timestamp(Instant.now())
                 .build();
     }
 }

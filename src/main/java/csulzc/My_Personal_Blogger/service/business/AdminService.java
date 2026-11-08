@@ -1,6 +1,7 @@
 package csulzc.My_Personal_Blogger.service.business;
 
 import csulzc.My_Personal_Blogger.api.dto.dashboard.DashboardStatsDTO;
+import csulzc.My_Personal_Blogger.api.dto.utils.DateTimeUtils;
 import csulzc.My_Personal_Blogger.domain.entity.Article;
 import csulzc.My_Personal_Blogger.domain.entity.Category;
 import csulzc.My_Personal_Blogger.domain.entity.User;
@@ -16,8 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.math.RoundingMode;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -45,8 +45,9 @@ public class AdminService {
     }
 
     private DashboardStatsDTO.UserStats getUserStats() {
-        LocalDateTime startOfToday = LocalDate.now().atStartOfDay();
-        LocalDateTime startOfMonth = LocalDate.now().withDayOfMonth(1).atStartOfDay();
+        // 统计口径按东八区自然日，避免 UTC 零点切分导致"今日/本月"数据错位
+        Instant startOfToday = DateTimeUtils.startOfToday();
+        Instant startOfMonth = DateTimeUtils.startOfMonth();
 
         // 一条聚合 SQL 替代 4 条独立 count
         Object[] stats = userRepository.getAggregateStats(User.UserStatus.ACTIVE, startOfToday, startOfMonth).get(0);

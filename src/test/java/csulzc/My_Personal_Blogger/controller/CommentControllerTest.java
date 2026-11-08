@@ -31,7 +31,7 @@ import org.springframework.security.config.annotation.web.configuration.EnableWe
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.test.web.servlet.MockMvc;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.Collections;
 import java.util.List;
 
@@ -91,7 +91,7 @@ class CommentControllerTest {
                 .displayName("测试用户")
                 .bio("这是测试用户的简介")
                 .avatar("https://example.com/avatar.jpg")
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
 
         createRequest = CommentCreateRequest.builder()
@@ -108,7 +108,7 @@ class CommentControllerTest {
                 .replyCount(0)
                 .likeCount(0)
                 .isLiked(false)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
 
         replyDTO = CommentReplyDTO.builder()
@@ -116,7 +116,7 @@ class CommentControllerTest {
                 .content("这是一条回复")
                 .commenter(userProfileDTO)
                 .replyToUser(userProfileDTO)
-                .createdAt(LocalDateTime.now())
+                .createdAt(Instant.now())
                 .build();
     }
 

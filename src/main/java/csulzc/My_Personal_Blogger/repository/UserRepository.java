@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -31,7 +31,7 @@ public interface UserRepository extends BaseRepository<User, Long> {
     @Query("SELECT COUNT(u) FROM User u WHERE u.status = :status")
     long countByStatus(@Param("status") User.UserStatus status);
 
-    long countByCreatedAtAfter(LocalDateTime dateTime);
+    long countByCreatedAtAfter(Instant dateTime);
 
     List<User> findByRole(User.UserRole role);
 
@@ -53,6 +53,6 @@ public interface UserRepository extends BaseRepository<User, Long> {
             "COALESCE(SUM(CASE WHEN u.createdAt >= :monthStart THEN 1 ELSE 0 END), 0) " +
             "FROM User u")
     List<Object[]> getAggregateStats(@Param("activeStatus") User.UserStatus activeStatus,
-                                     @Param("todayStart") LocalDateTime todayStart,
-                                     @Param("monthStart") LocalDateTime monthStart);
+                                     @Param("todayStart") Instant todayStart,
+                                     @Param("monthStart") Instant monthStart);
 }

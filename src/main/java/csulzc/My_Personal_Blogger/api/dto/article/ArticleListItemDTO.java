@@ -8,7 +8,7 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 import lombok.experimental.SuperBuilder;
 
-import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.List;
 
 /**
@@ -24,7 +24,7 @@ public class ArticleListItemDTO extends BaseDTO {
     private String coverImage;
     private UserProfileDTO author;
     private List<CategoryDTO> categories;
-    private LocalDateTime createdAt;
+    private Instant createdAt;
     private Article.ArticleStatus status;
     private Integer likeCount;
     private Integer commentCount;

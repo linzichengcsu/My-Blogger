@@ -112,3 +112,22 @@
 
 ### 📖 新增文档
 - 增加了适合非技术背景用户快速一键启动的说明文档`QUICK_START_FOR_BEGINNERS.md`，位于根目录下
+
+## [1.0.3] - 2026-11-08
+
+### ✨ 新增功能
+
+- Docker Compose 新增 MailHog 本地 SMTP 服务（SMTP 端口 1025、Web 收件箱 8025，仅绑定 127.0.0.1），开发与演示环境无需真实邮箱即可联调验证码邮件
+- 邮件发件人支持配置友好显示名：新增环境变量 `SMTP_FROM_NAME` / 配置项 `app.smtp.from-name`（默认"行吟博客"），收件箱展示更清晰
+
+### 🔧 优化变更
+
+- `.env.example` 与 `deploy/.env.example` 补充完整的 SMTP 配置段，默认示例切换为 QQ 邮箱真实投递（`smtp.qq.com:465` SSL），并附授权码获取方式与「SMTP_FROM 必须与 SMTP_USERNAME 一致」等关键配置注释
+- Docker Compose 中 blog 服务增加 2GB 内存上限，避免容器无限制占用宿主机内存
+- `QUICK_START_FOR_BEGINNERS.md` 终端启动说明补充 macOS Terminal（原仅提及 Windows PowerShell）
+
+### 🐛 已修复的重要问题
+
+- 统一时间管理逻辑：实体层时间字段改用 `java.time.Instant` 并按 UTC 存储，DTO 层通过新增的 `DateTimeUtils` 工具类统一格式化，配合 Hibernate `time_zone: UTC`，彻底消除前后端时区歧义
+- 启用 `application-dev.yml` 与 `application-prod.yml` 中此前被注释的 `app.smtp` 配置段，使 `SMTP_*` 环境变量能正确绑定到邮件服务属性，修复配置注入不生效的问题
+- 邮件 From 头对发件人显示名按 RFC 2047 进行 Base64 编码，避免非 ASCII 字符或空格引发 SMTP 地址解析异常（如 "Domain contains illegal character"），降低邮件被拒收或进入垃圾箱的概率
