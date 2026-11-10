@@ -1,5 +1,6 @@
 package csulzc.My_Personal_Blogger.domain.entity;
 
+import csulzc.My_Personal_Blogger.StressParams;
 import org.junit.jupiter.api.*;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
@@ -175,11 +176,18 @@ public class ArticleEntityTest
         @Test
         @DisplayName("测试大量set/get操作")
         void testMassOperations() {
+            final long defaultIterations = 10_000_000L;
+            final long defaultTimeLimitMs = 5_000L;
+            // 循环次数可通过 -Dstress.ops.article-entity=N 调整，或用全局 -Dstress.scale 等比缩放
+            long iterations = StressParams.longValue("ops.article-entity", defaultIterations);
+            // 阈值随迭代次数等比放大，避免调大压力后误报失败
+            long timeLimitMs = defaultTimeLimitMs * iterations / defaultIterations;
+
             long startTime = System.currentTimeMillis();
 
-            for (int i = 0; i < 10000000; i++)
+            for (long i = 0; i < iterations; i++)
             {
-                article.setId((long) i);
+                article.setId(i);
                 article.getId();
                 article.setTitle("user" + i);
                 article.getTitle();
@@ -188,7 +196,7 @@ public class ArticleEntityTest
             long endTime = System.currentTimeMillis();
             long duration = endTime - startTime;
 
-            assertTrue(duration < 5000, "10000000次操作应该在5000ms内完成");
+            assertTrue(duration < timeLimitMs, iterations + "次操作应该在" + timeLimitMs + "ms内完成");
         }
     }
 }

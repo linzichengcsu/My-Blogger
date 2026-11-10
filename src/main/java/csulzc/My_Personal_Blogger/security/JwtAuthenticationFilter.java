@@ -16,8 +16,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.Date;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -52,13 +53,13 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
                 String username = jwtTokenProvider.getUsernameFromToken(jwt);
                 String role = jwtTokenProvider.getRoleFromToken(jwt);
 
-                String authority = role != null ? role : "USER";
+                List<SimpleGrantedAuthority> authorities = buildAuthorities(role);
 
                 UsernamePasswordAuthenticationToken authentication =
                         new UsernamePasswordAuthenticationToken(
                                 userId,
                                 null,
-                                Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + authority))
+                                authorities
                         );
 
                 authentication.setDetails(
@@ -67,13 +68,30 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
                 SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                log.debug("用户认证成功: userId={}, username={}, role={}", userId, username, authority);
+                log.debug("用户认证成功: userId={}, username={}, role={}", userId, username, role);
             }
         } catch (Exception ex) {
             log.error("JWT认证处理失败", ex);
         }
 
         filterChain.doFilter(request, response);
+    }
+
+    /**
+     * 构建角色层级权限：SUPER_ADMIN 蕴含 ADMIN 蕴含 USER。
+     * 使 @PreAuthorize("hasRole('ADMIN')") 对超级管理员同样生效，
+     * 与 SecurityContextUtil.isAdmin() 的语义保持一致。
+     */
+    private List<SimpleGrantedAuthority> buildAuthorities(String role) {
+        List<SimpleGrantedAuthority> authorities = new ArrayList<>();
+        authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+        if ("ADMIN".equals(role) || "SUPER_ADMIN".equals(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        }
+        if ("SUPER_ADMIN".equals(role)) {
+            authorities.add(new SimpleGrantedAuthority("ROLE_SUPER_ADMIN"));
+        }
+        return authorities;
     }
 
     private String getJwtFromRequest(HttpServletRequest request) {

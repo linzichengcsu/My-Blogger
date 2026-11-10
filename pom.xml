@@ -13,13 +13,27 @@
 
 	<groupId>io.github.linzichengcsu</groupId>
 	<artifactId>blog</artifactId>
-	<version>1.0.2</version>
+	<version>1.0.3</version>
 	<name>xingyin-blog</name>
 	<description>行吟博客 —— 基于 Spring Boot 4 与 React 19 构建的个人博客系统</description>
 
 	<properties>
 		<java.version>21</java.version>
 	</properties>
+
+	<dependencyManagement>
+		<dependencies>
+			<!-- Spring Boot 4 的 spring-boot-dependencies 不再管理 Testcontainers 版本，
+			     显式导入 BOM 统一管理 junit-jupiter / mysql 及其传递依赖 -->
+			<dependency>
+				<groupId>org.testcontainers</groupId>
+				<artifactId>testcontainers-bom</artifactId>
+				<version>1.20.4</version>
+				<type>pom</type>
+				<scope>import</scope>
+			</dependency>
+		</dependencies>
+	</dependencyManagement>
 
 	<dependencies>
 		<!-- Web基础 -->
@@ -216,6 +230,26 @@
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
+            <scope>test</scope>
+        </dependency>
+
+        <!-- Testcontainers：并发正确性测试用真实 MySQL 复现生产语义
+             （INSERT IGNORE 静默去重 / InnoDB 行级锁，H2 无法等价模拟）。
+             由 @Testcontainers(disabledWithoutDocker=true) 守护：Docker 不可用时自动跳过，
+             默认 mvn test 不依赖 Docker。版本由 spring-boot-dependencies BOM 统一管理。 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-testcontainers</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.testcontainers</groupId>
+            <artifactId>mysql</artifactId>
             <scope>test</scope>
         </dependency>
     </dependencies>

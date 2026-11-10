@@ -118,7 +118,9 @@ public class ArticleController {
         if (pageRequest.getSize() <= 0 || pageRequest.getSize() > 100) {
             throw new IllegalArgumentException("每页大小必须在1-100之间");
         }
-        var user = userService.getUserDetail(authorId);
+        // 该端点为公开访问 (SecurityConfig 放行 GET /api/articles/**)，必须走不校验归属权的
+        // getUserProfile；若用 getUserDetail 会触发 validateOwnershipOrAdmin，匿名访客拿到 403。
+        var user = userService.getUserProfile(authorId);
         var author = new csulzc.My_Personal_Blogger.domain.entity.User();
         author.setId(user.getId());
         author.setUsername(user.getUsername());

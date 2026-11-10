@@ -60,6 +60,10 @@ public class LoadTestDataSeeder implements ApplicationRunner {
 
     @Override
     public void run(ApplicationArguments args) {
+        // 压测需要已知管理员密码：k6 登录后才能访问 @PreAuthorize("hasRole('ADMIN')") 的
+        // category:list / category:tree 缓存端点。幂等重置 admin 密码（每次启动值不变，无副作用）。
+        ensureKnownAdminPassword();
+
         Integer existing = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM articles", Integer.class);
         if (existing != null && existing > 0) {
             log.info("压测种子数据已存在（{} 篇文章），跳过灌入", existing);
@@ -77,6 +81,22 @@ public class LoadTestDataSeeder implements ApplicationRunner {
         log.info("压测种子数据灌入完成：作者 {} / 收藏夹 {} / 文章 {}，耗时 {}ms",
                 authorIds.size(), categoryIds.size(), articleIds.size(), System.currentTimeMillis() - startMs);
         log.info("压测登录账号：lt_author1 ~ lt_author{}，统一密码：{}", AUTHOR_COUNT, AUTHOR_PASSWORD);
+    }
+
+    private void ensureKnownAdminPassword() {
+        Integer adminCount = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM users WHERE username = 'admin'", Integer.class);
+        if (adminCount != null && adminCount > 0) {
+            jdbcTemplate.update("UPDATE users SET password_hash = ?, updated_at = NOW() WHERE username = 'admin'",
+                    AUTHOR_PASSWORD_HASH);
+        } else {
+            jdbcTemplate.update("""
+                    INSERT INTO users (version, created_at, updated_at, username, password_hash,
+                                       email, display_name, status, role)
+                    VALUES (0, NOW(), NOW(), 'admin', ?, 'admin@example.com', '系统管理员', 'ACTIVE', 'SUPER_ADMIN')
+                    """, AUTHOR_PASSWORD_HASH);
+        }
+        log.info("压测管理员账号就绪：用户名 admin，密码 {}", AUTHOR_PASSWORD);
     }
 
     private List<Long> insertAuthors() {
