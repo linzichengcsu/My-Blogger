@@ -38,12 +38,12 @@ Write-Output "--- ES 搜索 ---"
 Write-Output "wrk2 -d10s -R50 --latency '$BASE/api/articles/search?keyword=Redis&page=0&size=10'"
 Write-Output ""
 
-Write-Output "--- 收藏夹列表 ---"
-Write-Output "wrk2 -d10s -R50 --latency $BASE/api/categories/top-level"
+Write-Output "--- 收藏夹列表 (管理员端点, 需带 Authorization 头) ---"
+Write-Output "wrk2 -d10s -R50 --latency '$BASE/api/categories?page=0&size=10'"
 Write-Output ""
 
-Write-Output "--- 收藏夹树 ---"
-Write-Output "wrk2 -d10s -R30 --latency $BASE/api/categories/tree"
+Write-Output "--- 收藏夹统计 (管理员端点, 需带 Authorization 头) ---"
+Write-Output "wrk2 -d10s -R30 --latency $BASE/api/categories/statistics"
 Write-Output ""
 
 Write-Output "--- 对比命令: 改前 vs 改后 ---"

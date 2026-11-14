@@ -66,7 +66,6 @@ class CategoryControllerTest {
 
     private CategoryRequest createRequest;
     private CategoryDTO categoryDTO;
-    private CategoryTreeDTO categoryTreeDTO;
     private CategoryStatDTO categoryStatDTO;
 
     @BeforeEach
@@ -74,25 +73,13 @@ class CategoryControllerTest {
         createRequest = CategoryRequest.builder()
                 .name("Java编程")
                 .description("Java相关技术文章")
-                .parentCategoryId(null)
                 .build();
 
         categoryDTO = CategoryDTO.builder()
                 .id(1L)
                 .name("Java编程")
                 .description("Java相关技术文章")
-                .parentCategoryId(null)
-                .parentCategoryName(null)
                 .articleCount(5)
-                .subCategories(Collections.emptyList())
-                .build();
-
-        categoryTreeDTO = CategoryTreeDTO.builder()
-                .id(1L)
-                .name("Java编程")
-                .description("Java相关技术文章")
-                .articleCount(5)
-                .children(Collections.emptyList())
                 .build();
 
         categoryStatDTO = CategoryStatDTO.builder()
@@ -248,45 +235,6 @@ class CategoryControllerTest {
     }
 
     @Test
-    @Order(10)
-    @DisplayName("测试获取所有顶级分类 - 成功")
-    void testGetAllTopLevelCategories_Success() throws Exception {
-        List<CategoryDTO> categories = Collections.singletonList(categoryDTO);
-        given(categoryService.getAllTopLevelCategories()).willReturn(categories);
-
-        mockMvc.perform(get("/api/categories/top-level"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data[0].name").value("Java编程"));
-
-        then(categoryService).should().getAllTopLevelCategories();
-    }
-
-    @Test
-    @Order(11)
-    @DisplayName("测试获取子分类列表 - 成功")
-    void testGetSubCategories_Success() throws Exception {
-        Long parentCategoryId = 1L;
-        List<CategoryDTO> subCategories = Collections.singletonList(categoryDTO);
-        given(categoryService.getSubCategories(eq(parentCategoryId))).willReturn(subCategories);
-
-        mockMvc.perform(get("/api/categories/{categoryId}/subcategories", parentCategoryId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data[0].name").value("Java编程"));
-
-        then(categoryService).should().getSubCategories(eq(parentCategoryId));
-    }
-
-    @Test
-    @Order(12)
-    @DisplayName("测试获取子分类列表 - 无效ID")
-    void testGetSubCategories_InvalidId() throws Exception {
-        mockMvc.perform(get("/api/categories/{categoryId}/subcategories", -1))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     @Order(13)
     @DisplayName("测试获取所有分类（分页） - 成功")
     void testGetAllCategories_Success() throws Exception {
@@ -334,46 +282,6 @@ class CategoryControllerTest {
     }
 
     @Test
-    @Order(16)
-    @DisplayName("测试获取分类树 - 成功")
-    void testBuildCategoryTree_Success() throws Exception {
-        List<CategoryTreeDTO> tree = Collections.singletonList(categoryTreeDTO);
-        given(categoryService.buildCategoryTree()).willReturn(tree);
-
-        mockMvc.perform(get("/api/categories/tree"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data[0].name").value("Java编程"))
-                .andExpect(jsonPath("$.data[0].articleCount").value(5));
-
-        then(categoryService).should().buildCategoryTree();
-    }
-
-    @Test
-    @Order(17)
-    @DisplayName("测试获取分类路径 - 成功")
-    void testGetCategoryPath_Success() throws Exception {
-        Long categoryId = 1L;
-        List<CategoryDTO> path = Collections.singletonList(categoryDTO);
-        given(categoryService.getCategoryPath(eq(categoryId))).willReturn(path);
-
-        mockMvc.perform(get("/api/categories/{categoryId}/path", categoryId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data[0].name").value("Java编程"));
-
-        then(categoryService).should().getCategoryPath(eq(categoryId));
-    }
-
-    @Test
-    @Order(18)
-    @DisplayName("测试获取分类路径 - 无效ID")
-    void testGetCategoryPath_InvalidId() throws Exception {
-        mockMvc.perform(get("/api/categories/{categoryId}/path", -1))
-                .andExpect(status().isBadRequest());
-    }
-
-    @Test
     @Order(19)
     @DisplayName("测试获取分类统计 - 成功")
     void testGetCategoryStatistics_Success() throws Exception {
@@ -402,31 +310,6 @@ class CategoryControllerTest {
                 .andExpect(jsonPath("$.data[0].percentage").value(25.0));
 
         then(categoryService).should().getCategoryPercentageStats();
-    }
-
-    @Test
-    @Order(21)
-    @DisplayName("测试计算分类文章数 - 成功")
-    void testCountArticlesInCategoryIncludingSubCategories_Success() throws Exception {
-        Long categoryId = 1L;
-        long count = 10L;
-        given(categoryService.countArticlesInCategoryIncludingSubCategories(eq(categoryId)))
-                .willReturn(count);
-
-        mockMvc.perform(get("/api/categories/{categoryId}/article-count", categoryId))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value(10));
-
-        then(categoryService).should().countArticlesInCategoryIncludingSubCategories(eq(categoryId));
-    }
-
-    @Test
-    @Order(22)
-    @DisplayName("测试计算分类文章数 - 无效ID")
-    void testCountArticlesInCategoryIncludingSubCategories_InvalidId() throws Exception {
-        mockMvc.perform(get("/api/categories/{categoryId}/article-count", -1))
-                .andExpect(status().isBadRequest());
     }
 
     @Test
@@ -532,20 +415,5 @@ class CategoryControllerTest {
                 .andExpect(jsonPath("$.data").value(20));
 
         then(categoryService).should().getTotalCategoryCount();
-    }
-
-    @Test
-    @Order(31)
-    @DisplayName("测试获取顶级分类数量 - 成功")
-    void testGetTopLevelCategoryCount_Success() throws Exception {
-        long count = 5L;
-        given(categoryService.getTopLevelCategoryCount()).willReturn(count);
-
-        mockMvc.perform(get("/api/categories/stats/top-level"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.code").value(200))
-                .andExpect(jsonPath("$.data").value(5));
-
-        then(categoryService).should().getTopLevelCategoryCount();
     }
 }

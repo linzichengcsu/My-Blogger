@@ -80,7 +80,7 @@ public class SecurityConfig {
                             .requestMatchers("/api/users/**").authenticated()
                             .requestMatchers(HttpMethod.GET, "/api/articles/**").permitAll()
                             .requestMatchers("/api/articles/**").authenticated();
-                    // loadtest 压测栈: 放开分类只读端点, 便于压测 category:list/category:tree 缓存命中率
+                    // loadtest 压测栈: 放开分类只读端点, 便于压测 category:list 缓存命中率
                     // (仅 loadtest profile 生效, 生产仍需鉴权; 顺序上 GET 放行须在通用 authenticated 之前)
                     if (isLoadTestProfile()) {
                         auth.requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll();

@@ -24,7 +24,7 @@ import java.util.List;
  * 缓存命中率、索引选择、连接池竞争全都测不出来。本类在应用启动时批量灌入：</p>
  * <ul>
  *   <li>10 个作者账号（统一密码 {@value #AUTHOR_PASSWORD}，用户名 lt_author1..10）</li>
- *   <li>8 个顶级收藏夹 + 4 个子收藏夹</li>
+ *   <li>12 个平级收藏夹</li>
  *   <li>可配置数量的已发布文章（默认 1000 篇，见 {@code app.loadtest.seed.article-count}）</li>
  *   <li>文章-收藏夹关联</li>
  * </ul>
@@ -50,8 +50,7 @@ public class LoadTestDataSeeder implements ApplicationRunner {
             "$2a$10$aOgGRvApnZAgKrl2ObUf7.Pkx9YmGwA7Tm4lC0ZSL71sbdLKqp9.m";
 
     private static final int AUTHOR_COUNT = 10;
-    private static final int TOP_CATEGORY_COUNT = 8;
-    private static final int CHILD_CATEGORY_COUNT = 4;
+    private static final int CATEGORY_COUNT = 12;
 
     private final JdbcTemplate jdbcTemplate;
 
@@ -61,7 +60,7 @@ public class LoadTestDataSeeder implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         // 压测需要已知管理员密码：k6 登录后才能访问 @PreAuthorize("hasRole('ADMIN')") 的
-        // category:list / category:tree 缓存端点。幂等重置 admin 密码（每次启动值不变，无副作用）。
+        // category:list 缓存端点。幂等重置 admin 密码（每次启动值不变，无副作用）。
         ensureKnownAdminPassword();
 
         Integer existing = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM articles", Integer.class);
@@ -121,31 +120,21 @@ public class LoadTestDataSeeder implements ApplicationRunner {
 
     private List<Long> insertCategories(Long ownerId) {
         Instant now = Instant.now();
-        String[] topNames = {"Java", "Spring", "数据库", "中间件", "算法", "架构", "运维", "随笔"};
-        String[] topDescs = {"Java 语言相关", "Spring 生态", "数据库与存储", "Redis / MQ 等中间件",
-                "数据结构与算法", "系统架构设计", "部署与运维", "杂谈随笔"};
+        // 收藏夹已扁平化：全部 12 个收藏夹平级，无父子关系
+        String[] names = {"Java", "Spring", "数据库", "中间件", "算法", "架构", "运维", "随笔",
+                "Java 并发", "JVM 调优", "Spring 缓存", "SQL 优化"};
+        String[] descs = {"Java 语言相关", "Spring 生态", "数据库与存储", "Redis / MQ 等中间件",
+                "数据结构与算法", "系统架构设计", "部署与运维", "杂谈随笔",
+                "Java 并发编程", "JVM 性能调优", "Spring 缓存机制", "SQL 查询优化"};
 
-        List<Object[]> topBatch = new ArrayList<>(TOP_CATEGORY_COUNT);
-        for (int i = 0; i < TOP_CATEGORY_COUNT; i++) {
-            topBatch.add(new Object[]{now, now, "lt-" + topNames[i], topDescs[i], ownerId});
+        List<Object[]> batch = new ArrayList<>(CATEGORY_COUNT);
+        for (int i = 0; i < CATEGORY_COUNT; i++) {
+            batch.add(new Object[]{now, now, "lt-" + names[i], descs[i], ownerId});
         }
         jdbcTemplate.batchUpdate("""
                 INSERT INTO categories (version, created_at, updated_at, name, description, owner_id)
                 VALUES (0, ?, ?, ?, ?, ?)
-                """, topBatch);
-
-        List<Long> topIds = queryIds("SELECT id FROM categories WHERE name LIKE 'lt-%' AND parent_category_id IS NULL ORDER BY id");
-
-        List<Object[]> childBatch = new ArrayList<>(CHILD_CATEGORY_COUNT);
-        String[] childNames = {"Java 并发", "JVM 调优", "Spring 缓存", "SQL 优化"};
-        for (int i = 0; i < CHILD_CATEGORY_COUNT; i++) {
-            Long parentId = topIds.get(i % topIds.size());
-            childBatch.add(new Object[]{now, now, "lt-" + childNames[i], "子收藏夹：" + childNames[i], ownerId, parentId});
-        }
-        jdbcTemplate.batchUpdate("""
-                INSERT INTO categories (version, created_at, updated_at, name, description, owner_id, parent_category_id)
-                VALUES (0, ?, ?, ?, ?, ?, ?)
-                """, childBatch);
+                """, batch);
 
         return queryIds("SELECT id FROM categories WHERE name LIKE 'lt-%' ORDER BY id");
     }

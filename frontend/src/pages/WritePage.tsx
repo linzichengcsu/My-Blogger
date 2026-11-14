@@ -1,6 +1,6 @@
 /**
  * 写文章 / 编辑文章（/write 与 /edit/:id 共用）。
- * 左表单右预览的双栏写作页：收藏夹树拉取后拍平为多选（可选），封面走 /files/upload。
+ * 左表单右预览的双栏写作页：收藏夹列表拉取后作为多选（可选），封面走 /files/upload。
  */
 import { useEffect, useMemo, useState } from 'react'
 import {
@@ -24,9 +24,9 @@ import type { UploadProps } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import MarkdownView from '@/components/MarkdownView'
-import { buildMyCategoryTree, createArticle, getArticleById, updateArticle, uploadFile } from '@/api'
+import { createArticle, getArticleById, getMyCategories, updateArticle, uploadFile } from '@/api'
 import { ApiError } from '@/api/request'
-import type { ArticleCreateRequest, ArticleStatus, CategoryTreeDTO } from '@/types'
+import type { ArticleCreateRequest, ArticleStatus, CategoryDTO } from '@/types'
 import { ROUTES } from '@/constants/routes'
 import { fileUrl } from '@/utils'
 
@@ -35,21 +35,13 @@ type ArticleForm = Omit<ArticleCreateRequest, 'status'> & { status: ArticleStatu
 /** customRequest 入参类型，直接从 antd 推导，避免依赖 rc-upload 内部路径 */
 type UploadRequestOption = Parameters<NonNullable<UploadProps['customRequest']>>[0]
 
-/** 拍平收藏夹树为 Select options（按层级缩进） */
-function flattenTree(nodes: CategoryTreeDTO[] = [], depth = 0): { label: string; value: number }[] {
-  return nodes.flatMap((n) => [
-    { label: `${'\u00A0\u00A0'.repeat(depth)}${depth ? '└ ' : ''}${n.name}`, value: n.id! },
-    ...flattenTree(n.children ?? [], depth + 1),
-  ])
-}
-
 export default function WritePage() {
   const { id } = useParams<{ id: string }>()
   const articleId = id ? Number(id) : null
   const isEdit = Boolean(articleId)
   const navigate = useNavigate()
   const [form] = Form.useForm<ArticleForm>()
-  const [tree, setTree] = useState<CategoryTreeDTO[]>([])
+  const [categories, setCategories] = useState<CategoryDTO[]>([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -59,7 +51,7 @@ export default function WritePage() {
 
   useEffect(() => {
     // 只加载本人创建的收藏夹，避免看到其他用户创建的收藏夹
-    buildMyCategoryTree().then(setTree).catch(() => setTree([]))
+    getMyCategories().then(setCategories).catch(() => setCategories([]))
     if (articleId) {
       getArticleById(articleId)
         .then((a) => {
@@ -79,7 +71,7 @@ export default function WritePage() {
     }
   }, [articleId, form])
 
-  const categoryOptions = useMemo(() => flattenTree(tree), [tree])
+  const categoryOptions = useMemo(() => categories.map((c) => ({ label: c.name ?? '', value: c.id! })), [categories])
 
   const customUpload = async (option: UploadRequestOption) => {
     setUploading(true)
@@ -165,7 +157,7 @@ export default function WritePage() {
                 options={categoryOptions}
                 placeholder="选择收藏夹（可选，可多选）"
                 allowClear
-                notFoundContent={tree.length === 0 ? '暂无可用收藏夹' : undefined}
+                notFoundContent={categories.length === 0 ? '暂无可用收藏夹' : undefined}
               />
             </Form.Item>
             <Form.Item name="tags" label="标签">

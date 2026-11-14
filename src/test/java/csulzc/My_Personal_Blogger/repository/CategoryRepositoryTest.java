@@ -38,7 +38,7 @@ class CategoryRepositoryTest {
                 .build();
         entityManager.persist(testAuthor);
 
-        // 准备分类数据
+        // 准备三个平级分类（无父子关系）
         techCategory = Category.builder()
                 .name("技术")
                 .build();
@@ -46,13 +46,11 @@ class CategoryRepositoryTest {
 
         javaCategory = Category.builder()
                 .name("Java")
-                .parentCategory(techCategory)
                 .build();
         entityManager.persist(javaCategory);
 
         springCategory = Category.builder()
                 .name("Spring")
-                .parentCategory(techCategory)
                 .build();
         entityManager.persist(springCategory);
 
@@ -72,7 +70,6 @@ class CategoryRepositoryTest {
 
         assertThat(found).isPresent();
         assertThat(found.get().getName()).isEqualTo("Java");
-        assertThat(found.get().getParentCategory().getName()).isEqualTo("技术");
     }
 
     @Test
@@ -81,26 +78,6 @@ class CategoryRepositoryTest {
         Optional<Category> found = categoryRepository.findByName("Python");
 
         assertThat(found).isEmpty();
-    }
-
-    @Test
-    @DisplayName("查询顶级分类 - 没有父分类")
-    void findByParentCategoryIsNull() {
-        List<Category> topCategories = categoryRepository.findByParentCategoryIsNull();
-
-        assertThat(topCategories).hasSize(1);
-        assertThat(topCategories.get(0).getName()).isEqualTo("技术");
-    }
-
-    @Test
-    @DisplayName("查询某个分类的所有子分类")
-    void findByParentCategory() {
-        List<Category> subCategories = categoryRepository.findByParentCategory(techCategory);
-
-        assertThat(subCategories).hasSize(2);
-        assertThat(subCategories)
-                .extracting(Category::getName)
-                .containsExactlyInAnyOrder("Java", "Spring");
     }
 
     @Test
@@ -115,24 +92,24 @@ class CategoryRepositoryTest {
 
         assertThat(results).hasSize(3);  // 技术、Java、Spring
 
-        // 验证文章数量
+        // 验证文章数量（平级：仅统计直接关联的文章）
         results.forEach(row -> {
             Category category = (Category) row[0];
             Long count = (Long) row[1];
 
             if (category.getName().equals("技术")) {
-                assertThat(count).isEqualTo(0);  // 所有文章都属于技术
+                assertThat(count).isEqualTo(0);
             } else if (category.getName().equals("Java")) {
-                assertThat(count).isEqualTo(2);  // 两篇Java文章
+                assertThat(count).isEqualTo(2);
             } else if (category.getName().equals("Spring")) {
-                assertThat(count).isEqualTo(2);  // 两篇Spring文章
+                assertThat(count).isEqualTo(2);
             }
         });
     }
 
     @Test
     @DisplayName("查询分类及其文章数量 - 无文章的分类")
-    void findAllWithArticleCount_IncludingSubCategories_NoArticles() {
+    void findAllWithArticleCount_NoArticles() {
         List<Object[]> results = categoryRepository.findAllWithArticleCount();
 
         assertThat(results).hasSize(3);
@@ -160,57 +137,16 @@ class CategoryRepositoryTest {
     }
 
     @Test
-    @DisplayName("分类父子关系完整性测试")
-    void categoryParentChildIntegrity() {
-        // 验证父子关系
-        assertThat(javaCategory.getParentCategory()).isEqualTo(techCategory);
-        assertThat(springCategory.getParentCategory()).isEqualTo(techCategory);
-
-        // 验证父分类能获取到子分类
-        Category foundTech = entityManager.find(Category.class, techCategory.getId());
-        assertThat(foundTech.getSubCategories())
-                .hasSize(2)
-                .extracting(Category::getName)
-                .containsExactlyInAnyOrder("Java", "Spring");
-    }
-
-    @Test
-    @DisplayName("分类名称唯一性测试（如果业务要求）")
+    @DisplayName("分类名称唯一性测试")
     void categoryNameUniqueConstraint() {
         Category duplicateCategory = Category.builder()
                 .name("Java")  // 同名分类
-                .parentCategory(techCategory)
                 .build();
 
-        // 如果数据库有唯一约束，这里会抛异常
+        // 数据库有唯一约束，这里会抛异常
         assertThatThrownBy(() -> {
             entityManager.persistAndFlush(duplicateCategory);
         }).isInstanceOf(Exception.class);
-    }
-
-    @Test
-    @DisplayName("删除父分类时的行为测试（需要根据业务决定）")
-    void deleteParentCategory() {
-        // 注意：这个测试需要根据你的级联策略来调整
-        // 这里只是演示如何测试删除行为
-
-        Long techId = techCategory.getId();
-        Long javaId = javaCategory.getId();
-
-        // 删除父分类
-        entityManager.remove(techCategory);
-        entityManager.flush();
-
-        // 验证父分类已删除
-        assertThat(entityManager.find(Category.class, techId)).isNull();
-
-        // 验证子分类的行为（根据CascadeType决定）
-        // 如果设置了cascade，子分类也会被删除
-        // 如果没设置，子分类的parent变为null
-        Category foundJava = entityManager.find(Category.class, javaId);
-        if (foundJava != null) {
-            assertThat(foundJava.getParentCategory()).isNull();
-        }
     }
 
     // 辅助方法
@@ -240,15 +176,7 @@ class CategoryRepositoryTest {
 
         List<Object[]> results = categoryRepository.findAllWithArticleCount();
 
-        // 打印统计结果
-        System.out.println("\n=== 分类文章统计 ===");
-        results.forEach(row -> {
-            Category cat = (Category) row[0];
-            Long count = (Long) row[1];
-            System.out.printf("分类: %-10s 文章数: %d%n", cat.getName(), count);
-        });
-
-        // 验证统计正确性
+        // 验证统计正确性（平级：仅统计直接关联）
         results.forEach(row -> {
             Category cat = (Category) row[0];
             Long count = (Long) row[1];

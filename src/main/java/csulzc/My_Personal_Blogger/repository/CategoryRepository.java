@@ -17,16 +17,7 @@ public interface CategoryRepository extends BaseRepository<Category, Long> {
     // 1. 根据名称查询
     Optional<Category> findByName(String name);
 
-    // 2. 查询顶级收藏夹（没有父收藏夹）
-    List<Category> findByParentCategoryIsNull();
-
-    // 2.1 统计顶级收藏夹数量（避免加载全部顶级收藏夹再 size()）
-    long countByParentCategoryIsNull();
-
-    // 3. 查询某个收藏夹的所有子收藏夹
-    List<Category> findByParentCategory(Category parent);
-
-    // 4. 查询收藏夹及其文章数量
+    // 2. 查询收藏夹及其文章数量
     @Query("SELECT c, COUNT(a) FROM Category c LEFT JOIN c.articles a GROUP BY c")
     List<Object[]> findAllWithArticleCount();
 

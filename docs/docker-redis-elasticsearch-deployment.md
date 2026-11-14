@@ -438,7 +438,7 @@ docker compose exec mysql mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" \
 | 客户端 Lettuce + commons-pool2 连接池 | `pom.xml` | 无需额外依赖；池参数已配置好 |
 | 连接参数走 `REDIS_HOST/PORT/PASSWORD` 环境变量 | dev/prod yml | 容器里指向服务名 `redis` |
 | 缓存总开关 `app.cache.enabled`：dev=`false`，prod=`true` | 两份 yml | **本地开发默认不启用缓存，不装 Redis 也能跑**（Lettuce 懒连接）；生产强制启用 |
-| 默认 TTL 30 分钟；`category:list`/`category:tree` 1 小时；`category:stats` 10 分钟 | `RedisConfig.java` | Redis 是**纯缓存**，没有会话/分布式锁等不可丢数据 |
+| 默认 TTL 30 分钟；`category:list` 1 小时；`category:stats` 10 分钟 | `RedisConfig.java` | Redis 是**纯缓存**，没有会话/分布式锁等不可丢数据 |
 | 固定使用 `database: 0` | dev/prod yml | 单库够用，不需要多 database 隔离 |
 | prod 连接池 max-active=20、超时 3s | `application-prod.yml` | Redis 要设合理 `maxclients`（默认 10000，远够） |
 | dev 下 `management.health.redis.enabled=false` | `application-dev.yml` | 本地没起 Redis 时健康检查不会报 DOWN，属预期 |
@@ -522,9 +522,9 @@ docker exec -it <redis容器> redis-cli -a "你的密码" --no-auth-warning CONF
 # allkeys-lru
 
 # 3) 业务验证（prod 下缓存是开的）：
-#    调用几次 GET /api/categories/tree，再查键
+#    调用几次 GET /api/categories（管理员端点），再查键
 docker exec -it <redis容器> redis-cli -a "你的密码" --no-auth-warning --scan --pattern 'category:*'
-# 出现 category:tree 等键；TTL 应 ≤ 3600 秒
+# 出现 category:list 等键；TTL 应 ≤ 3600 秒
 ```
 
 看到键即说明 `RedisConfig` 的 `RedisCacheManager`（String key + JSON value 序列化）工作正常。
@@ -535,7 +535,7 @@ docker exec -it <redis容器> redis-cli -a "你的密码" --no-auth-warning --sc
 |---|---|
 | `NOAUTH Authentication required` | 应用没配 `REDIS_PASSWORD` 或密码与 `requirepass` 不一致；compose 中两处都引用同一个变量即可 |
 | 应用日志 `Unable to connect to localhost:6379` | 容器里写了 localhost（指向容器自身）；host 必须是 compose 服务名 `redis` |
-| `WRONGTYPE` / 反序列化 `ClassCastException` | 序列化结构或 DTO 变更后的历史键，等 TTL 过期，或对该缓存名执行 `DEL category:tree`（整库可 `FLUSHDB`，纯缓存无副作用） |
+| `WRONGTYPE` / 反序列化 `ClassCastException` | 序列化结构或 DTO 变更后的历史键，等 TTL 过期，或对该缓存名执行 `DEL category:list`（整库可 `FLUSHDB`，纯缓存无副作用） |
 | `OOM command not allowed` | 命中 maxmemory 且策略为 noeviction；改为 `allkeys-lru` 并调大 maxmemory |
 | Redis 内存涨满 | 先 `INFO memory` 看用量，`--bigkeys`（redis-cli）排查异常大 key；本项目正常使用 256mb 足够 |
 | 版本升级（7.x 小版本） | 标签改新版直接重建容器，AOF 在卷里；跨大版本前先用备份卷启动一个测试容器验证 AOF 兼容 |

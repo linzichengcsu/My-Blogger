@@ -5,7 +5,6 @@ import csulzc.My_Personal_Blogger.api.dto.article.ArticleDetailDTO;
 import csulzc.My_Personal_Blogger.api.dto.article.ArticleListItemDTO;
 import csulzc.My_Personal_Blogger.api.dto.article.ArticleUpdateRequest;
 import csulzc.My_Personal_Blogger.api.dto.category.CategoryRequest;
-import csulzc.My_Personal_Blogger.api.dto.category.CategoryTreeDTO;
 import csulzc.My_Personal_Blogger.api.dto.common.PageResponseDTO;
 import csulzc.My_Personal_Blogger.config.RedisConfig;
 import csulzc.My_Personal_Blogger.domain.entity.Article;
@@ -253,29 +252,27 @@ public class RedisCacheTest {
 
     @Test
     @Order(5)
-    @DisplayName("测试分类树缓存 - 创建分类后驱逐")
-    void testCategoryTree_CacheAndEvict() {
-        // Given - 首次构建分类树（写入缓存）
-        List<CategoryTreeDTO> firstTree = categoryService.buildCategoryTree();
-        assertThat(firstTree).hasSize(1);
+    @DisplayName("测试分类列表缓存 - 创建分类后驱逐")
+    void testCategoryList_CacheAndEvict() {
+        // Given - 首次查询分类列表（写入 category:list 缓存）
+        SimpleKey listKey = new SimpleKey(0, 10, "createdAt");
+        var firstPage = categoryService.getAllCategories(0, 10, "createdAt");
+        assertThat(firstPage.getTotalElements()).isEqualTo(1);
 
-        Cache treeCache = cacheManager.getCache("category:tree");
-        assertThat(treeCache.get(SimpleKey.EMPTY)).isNotNull();
+        Cache listCache = cacheManager.getCache("category:list");
+        assertThat(listCache.get(listKey)).isNotNull();
 
-        // When - 创建新顶级分类
+        // When - 创建新分类（触发 category:list allEntries 驱逐）
         CategoryRequest createRequest = CategoryRequest.builder()
                 .name("Python")
                 .description("Python 编程语言")
                 .build();
         categoryService.createCategory(createRequest);
 
-        // Then - 分类树缓存被驱逐，重建后包含新分类
-        assertThat(treeCache.get(SimpleKey.EMPTY)).isNull();
+        // Then - 列表缓存被驱逐，重新查询包含新分类
+        assertThat(listCache.get(listKey)).isNull();
 
-        List<CategoryTreeDTO> refreshedTree = categoryService.buildCategoryTree();
-        assertThat(refreshedTree).hasSize(2);
-        assertThat(refreshedTree)
-                .extracting(CategoryTreeDTO::getName)
-                .contains("Python");
+        var refreshedPage = categoryService.getAllCategories(0, 10, "createdAt");
+        assertThat(refreshedPage.getTotalElements()).isEqualTo(2);
     }
 }

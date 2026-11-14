@@ -1261,69 +1261,6 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ResultLong'
-  /api/categories/{categoryId}/subcategories:
-    get:
-      tags:
-        - 分类管理
-      summary: 获取子分类
-      description: 获取指定分类的所有子分类
-      operationId: getSubCategories
-      parameters:
-        - name: categoryId
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ResultListCategoryDTO'
-  /api/categories/{categoryId}/path:
-    get:
-      tags:
-        - 分类管理
-      summary: 获取分类路径
-      description: 获取指定分类的完整路径，从根到当前分类
-      operationId: getCategoryPath
-      parameters:
-        - name: categoryId
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ResultListCategoryDTO'
-  /api/categories/{categoryId}/article-count:
-    get:
-      tags:
-        - 分类管理
-      summary: 获取分类文章数量
-      description: 获取指定分类的文章数量，包含子分类
-      operationId: countArticlesInCategoryIncludingSubCategories
-      parameters:
-        - name: categoryId
-          in: path
-          required: true
-          schema:
-            type: integer
-            format: int64
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ResultLong'
   /api/categories/with-articles:
     get:
       tags:
@@ -1338,34 +1275,6 @@ paths:
             '*/*':
               schema:
                 $ref: '#/components/schemas/ResultListCategoryDTO'
-  /api/categories/tree:
-    get:
-      tags:
-        - 分类管理
-      summary: 获取分类树
-      description: 获取分类树结构，用于前端下拉选择器
-      operationId: buildCategoryTree
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ResultListCategoryTreeDTO'
-  /api/categories/top-level:
-    get:
-      tags:
-        - 分类管理
-      summary: 获取所有顶级分类
-      description: 获取所有顶级分类列表
-      operationId: getAllTopLevelCategories
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ResultListCategoryDTO'
   /api/categories/stats/total:
     get:
       tags:
@@ -1373,20 +1282,6 @@ paths:
       summary: 获取分类总数
       description: 获取分类的总数
       operationId: getTotalCategoryCount
-      responses:
-        '200':
-          description: OK
-          content:
-            '*/*':
-              schema:
-                $ref: '#/components/schemas/ResultLong'
-  /api/categories/stats/top-level:
-    get:
-      tags:
-        - 分类管理
-      summary: 获取顶级分类数量
-      description: 获取顶级分类的数量
-      operationId: getTopLevelCategoryCount
       responses:
         '200':
           description: OK
@@ -1717,9 +1612,6 @@ components:
           type: string
         description:
           type: string
-        parentCategoryId:
-          type: integer
-          format: int64
     CategoryDTO:
       type: object
       properties:
@@ -1736,18 +1628,9 @@ components:
           type: string
         description:
           type: string
-        parentCategoryId:
-          type: integer
-          format: int64
-        parentCategoryName:
-          type: string
         articleCount:
           type: integer
           format: int32
-        subCategories:
-          type: array
-          items:
-            $ref: '#/components/schemas/CategoryDTO'
     ResultCategoryDTO:
       type: object
       properties:
@@ -2353,31 +2236,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/CategoryDTO'
-        message:
-          type: string
-        code:
-          type: integer
-          format: int32
-    CategoryTreeDTO:
-      type: object
-      properties:
-        id:
-          type: integer
-          format: int64
-        name:
-          type: string
-        description:
-          type: string
-        articleCount:
-          type: integer
-          format: int32
-    ResultListCategoryTreeDTO:
-      type: object
-      properties:
-        data:
-          type: array
-          items:
-            $ref: '#/components/schemas/CategoryTreeDTO'
         message:
           type: string
         code:

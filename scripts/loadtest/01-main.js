@@ -6,7 +6,7 @@
 //   2. ArticleList       - 文章列表 (GET /api/articles?page&size)  测分页缓存
 //   3. AuthorList        - 作者文章列表 (GET /api/articles/author/{id})  测身份感知 key
 //   4. Search            - ES 全文检索 (GET /api/articles/search?keyword=Redis)
-//   5. Categories        - 收藏夹列表 + 树形结构 (测 category:list + category:tree)
+//   5. Categories        - 收藏夹列表 + 统计 (测 category:list 缓存)
 //
 // 运行前提：
 //   - 应用已以 loadtest profile 启动，且种子数据灌入完成
@@ -34,9 +34,9 @@ const VUS      = parseInt(__ENV.VUS) || 20;
 const KEYWORD  = __ENV.KEYWORD       || 'Redis';
 const HOT      = parseInt(__ENV.HOT_ARTICLE) || 1;
 
-// 管理员账号：category:list / category:tree 是 @PreAuthorize("hasRole('ADMIN')") 端点，
-// 匿名会被方法级安全拦截为 403。loadtest profile 启动时由 LoadTestDataSeeder 把 admin
-// 密码重置为已知值，这里登录一次拿 Bearer token 供所有 VU 复用。
+// 管理员账号：loadtest profile 下 SecurityConfig 已对 GET /api/categories/** 放行，
+// 但脚本统一登录拿 Bearer token 复用管理员身份（LoadTestDataSeeder 启动时把 admin
+// 密码重置为已知值），供所有 VU 复用，也覆盖其它需鉴权的端点。
 const ADMIN_USER = __ENV.LT_ADMIN_USER || 'admin';
 const ADMIN_PASS = __ENV.LT_ADMIN_PASS || 'LoadTest123!';
 
@@ -140,10 +140,10 @@ export default function (data) {
     });
     sleep(0.1);
 
-    // 5. 收藏夹列表 + 树形结构（管理员专属，测 category:list / category:tree 缓存）
+    // 5. 收藏夹列表 + 统计（管理员专属，测 category:list 缓存）
     group('Categories', function () {
-        getJson(`${BASE}/api/categories/top-level`, authHeaders);
-        getJson(`${BASE}/api/categories/tree`, authHeaders);
+        getJson(`${BASE}/api/categories?page=0&size=10`, authHeaders);
+        getJson(`${BASE}/api/categories/statistics`, authHeaders);
     });
     sleep(0.1);
 }

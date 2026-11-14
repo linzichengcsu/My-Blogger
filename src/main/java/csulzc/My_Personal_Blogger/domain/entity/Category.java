@@ -28,17 +28,7 @@ public class Category extends BaseEntity {
     @Builder.Default
     private Set<Article> articles = new HashSet<>();
 
-    // 2. 自关联：收藏夹的层级结构
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "parent_category_id")
-    private Category parentCategory;
-
-    @OneToMany(mappedBy = "parentCategory", cascade = CascadeType.ALL)
-    @Builder.Default
-    @ToString.Exclude
-    private List<Category> subCategories = new ArrayList<>();
-
-    // 3. 多对一：收藏夹的创建者（收藏夹为用户个人资产，按创建者隔离展示）
+    // 2. 多对一：收藏夹的创建者（收藏夹为用户个人资产，按创建者隔离展示）
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id")
     private User owner;

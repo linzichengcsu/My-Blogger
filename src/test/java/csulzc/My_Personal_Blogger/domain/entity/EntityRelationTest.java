@@ -49,13 +49,13 @@ class EntityRelationTest {
         article.setAuthor(testUser);
         entityManager.persist(article);
 
+        // 收藏夹已扁平化：所有收藏夹平级，无父子关系
         Category tech = new Category();
         tech.setName("Tech");
         entityManager.persist(tech);
 
         Category java = new Category();
         java.setName("Java");
-        java.setParentCategory(tech);  // 设置父子关系
         entityManager.persist(java);
 
         // 使用辅助方法保持双向关系
@@ -67,10 +67,13 @@ class EntityRelationTest {
         Article found = entityManager.find(Article.class, article.getId());
         assertEquals(2, found.getCategories().size());
 
-        // 验证分类的父子关系
+        // 验证两个平级收藏夹均可被检索，且互不包含父子关系
+        Category foundTech = entityManager.find(Category.class, tech.getId());
         Category foundJava = entityManager.find(Category.class, java.getId());
-        assertNotNull(foundJava.getParentCategory());
-        assertEquals("Tech", foundJava.getParentCategory().getName());
+        assertNotNull(foundTech);
+        assertNotNull(foundJava);
+        assertEquals("Tech", foundTech.getName());
+        assertEquals("Java", foundJava.getName());
     }
 
     @Test
