@@ -188,6 +188,10 @@ public class UserEntityTest
             long iterations = StressParams.longValue("ops.user-entity", defaultIterations);
             // 阈值随迭代次数等比放大，避免调大压力后误报失败
             long timeLimitMs = defaultTimeLimitMs * iterations / defaultIterations;
+            // CI runner 性能弱且波动大，放宽阈值避免误报；本地基准不变
+            if (System.getenv("CI") != null) {
+                timeLimitMs *= 5;
+            }
 
             long startTime = System.currentTimeMillis();
 
