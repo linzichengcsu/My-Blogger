@@ -20,6 +20,4 @@ public class CategoryRequest {
     private String name;
 
     private String description;
-
-    private Long parentCategoryId;  // 父收藏夹ID
 }

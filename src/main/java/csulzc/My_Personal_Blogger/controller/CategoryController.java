@@ -17,7 +17,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/categories")
 @RequiredArgsConstructor
-@Tag(name = "收藏夹管理", description = "收藏夹CRUD及父子类关系相关接口")
+@Tag(name = "收藏夹管理", description = "收藏夹CRUD相关接口")
 public class CategoryController {
 
     private final CategoryService categoryService;
@@ -79,31 +79,6 @@ public class CategoryController {
     }
 
     /**
-     * 获取所有顶级收藏夹
-     */
-    @GetMapping("/top-level")
-    @PreAuthorize("hasRole('ADMIN')")
-    @Operation(summary = "获取所有顶级收藏夹", description = "获取所有顶级收藏夹列表")
-    public ResponseEntity<Result<List<CategoryDTO>>> getAllTopLevelCategories() {
-        List<CategoryDTO> categories = categoryService.getAllTopLevelCategories();
-        return ResponseEntity.ok(Result.success(categories));
-    }
-
-    /**
-     * 获取某个收藏夹的所有子收藏夹
-     */
-    @GetMapping("/{categoryId}/subcategories")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "获取子收藏夹", description = "获取指定收藏夹的所有子收藏夹")
-    public ResponseEntity<Result<List<CategoryDTO>>> getSubCategories(@PathVariable Long categoryId) {
-        if (categoryId == null || categoryId <= 0) {
-            throw new IllegalArgumentException("收藏夹ID无效");
-        }
-        List<CategoryDTO> subCategories = categoryService.getSubCategories(categoryId);
-        return ResponseEntity.ok(Result.success(subCategories));
-    }
-
-    /**
      * 获取所有收藏夹（分页）
      */
     @GetMapping
@@ -124,17 +99,6 @@ public class CategoryController {
     }
 
     /**
-     * 获取收藏夹树（用于前端下拉选择器）
-     */
-    @GetMapping("/tree")
-    @Operation(summary = "获取收藏夹树", description = "获取收藏夹树结构，用于前端下拉选择器")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Result<List<CategoryTreeDTO>>> buildCategoryTree() {
-        List<CategoryTreeDTO> tree = categoryService.buildCategoryTree();
-        return ResponseEntity.ok(Result.success(tree));
-    }
-
-    /**
      * 获取当前登录用户创建的收藏夹（写文章/个人中心使用，无需管理员权限）
      */
     @GetMapping("/my")
@@ -143,31 +107,6 @@ public class CategoryController {
     public ResponseEntity<Result<List<CategoryDTO>>> getMyCategories() {
         List<CategoryDTO> categories = categoryService.getMyCategories();
         return ResponseEntity.ok(Result.success(categories));
-    }
-
-    /**
-     * 获取当前登录用户创建的收藏夹树（用于写文章下拉选择器，无需管理员权限）
-     */
-    @GetMapping("/my/tree")
-    @PreAuthorize("isAuthenticated()")
-    @Operation(summary = "获取我的收藏夹树", description = "获取当前登录用户创建的收藏夹树结构")
-    public ResponseEntity<Result<List<CategoryTreeDTO>>> buildMyCategoryTree() {
-        List<CategoryTreeDTO> tree = categoryService.buildMyCategoryTree();
-        return ResponseEntity.ok(Result.success(tree));
-    }
-
-    /**
-     * 获取收藏夹的完整路径（从根到当前收藏夹）
-     */
-    @GetMapping("/{categoryId}/path")
-    @Operation(summary = "获取收藏夹路径", description = "获取指定收藏夹的完整路径，从根到当前收藏夹")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Result<List<CategoryDTO>>> getCategoryPath(@PathVariable Long categoryId) {
-        if (categoryId == null || categoryId <= 0) {
-            throw new IllegalArgumentException("收藏夹ID无效");
-        }
-        List<CategoryDTO> path = categoryService.getCategoryPath(categoryId);
-        return ResponseEntity.ok(Result.success(path));
     }
 
     /**
@@ -190,21 +129,6 @@ public class CategoryController {
     public ResponseEntity<Result<List<CategoryStatDTO>>> getCategoryPercentageStats() {
         List<CategoryStatDTO> stats = categoryService.getCategoryPercentageStats();
         return ResponseEntity.ok(Result.success(stats));
-    }
-
-    /**
-     * 计算收藏夹的文章数量（包含子收藏夹）
-     */
-    @Operation(summary = "获取收藏夹文章数量", description = "获取指定收藏夹的文章数量，包含子收藏夹")
-    @GetMapping("/{categoryId}/article-count")
-    @PreAuthorize("isAuthenticated()")
-    public ResponseEntity<Result<Long>> countArticlesInCategoryIncludingSubCategories(
-            @PathVariable Long categoryId) {
-        if (categoryId == null || categoryId <= 0) {
-            throw new IllegalArgumentException("收藏夹ID无效");
-        }
-        long count = categoryService.countArticlesInCategoryIncludingSubCategories(categoryId);
-        return ResponseEntity.ok(Result.success(count));
     }
 
     /**
@@ -273,14 +197,4 @@ public class CategoryController {
         return ResponseEntity.ok(Result.success(count));
     }
 
-    /**
-     * 获取顶级收藏夹数量
-     */
-    @Operation(summary = "获取顶级收藏夹数量", description = "获取顶级收藏夹的数量")
-    @GetMapping("/stats/top-level")
-    @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Result<Long>> getTopLevelCategoryCount() {
-        long count = categoryService.getTopLevelCategoryCount();
-        return ResponseEntity.ok(Result.success(count));
-    }
 }

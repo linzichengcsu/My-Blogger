@@ -11,7 +11,7 @@
 // 本脚本用一种近似做法: `ramping-vus` 瞬间拉到大量 VUs。
 //
 // 运行:
-//   k6 run -e BASE_URL=http://127.0.0.1:8080 -e HOT=1001 scripts/loadtest/02-breakdown.js
+//   k6 run -e BASE_URL=http://127.0.0.1:8080 -e HOT=1 scripts/loadtest/02-breakdown.js
 //
 // 验收标准:
 //   `cache.gets{result=miss}` 增量 = 1 (或很小)
@@ -22,7 +22,7 @@ import http from 'k6/http';
 import { check, group } from 'k6';
 
 const BASE = __ENV.BASE_URL || 'http://127.0.0.1:8080';
-const HOT  = parseInt(__ENV.HOT) || 1001;
+const HOT  = parseInt(__ENV.HOT) || 1;
 const VUS  = parseInt(__ENV.VUS) || 200;
 
 export const options = {
@@ -53,7 +53,7 @@ export default function () {
 // ---- 测试执行前：用一个 VU 先清掉热点 key 的缓存，让全部 VU 同时面对 miss ----
 // k6 没有 before() 可以跑 redis-cli，所以只能请用户手动先执行:
 //   docker exec blog-loadtest-redis-1 redis-cli -a loadtest-redis-pwd --no-auth-warning \
-//       DEL "article:detail::1001"
+//       DEL "article:detail::1"
 // 然后立刻启动本脚本。两个动作要快，否则缓存自然过期前可能被其他请求重建。
 //
 // 或者直接在 VU 里加一个固定 VU 做预热后，手动 DEL，再跑 ramping。

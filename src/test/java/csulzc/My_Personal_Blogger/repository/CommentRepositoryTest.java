@@ -1,5 +1,6 @@
 package csulzc.My_Personal_Blogger.repository;
 
+import csulzc.My_Personal_Blogger.StressParams;
 import csulzc.My_Personal_Blogger.domain.entity.*;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -303,7 +304,8 @@ public class CommentRepositoryTest {
     @DisplayName("测试批量插入性能")
     void testBatchInsert() {
         // Given
-        int batchSize = 100;
+        // 批量条数可通过 -Dstress.batch.comment=N 调整，或用全局 -Dstress.scale 等比缩放
+        int batchSize = StressParams.intValue("batch.comment", 100);
         List<Comment> comments = new ArrayList<>();
 
         // When - 批量创建

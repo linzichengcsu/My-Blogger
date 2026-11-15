@@ -73,8 +73,6 @@ public class RedisConfig {
                 .withCacheConfiguration("category:detail", defaultConfig)             // 30min 抖动 (默认)
                 .withCacheConfiguration("category:list",
                         defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofHours(1), TTL_JITTER)))
-                .withCacheConfiguration("category:tree",
-                        defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofHours(1), TTL_JITTER)))
                 .withCacheConfiguration("category:stats",
                         defaultConfig.entryTtl(new JitteredTtlFunction(Duration.ofMinutes(10), TTL_JITTER)))
                 // withCacheConfiguration 登记的全部 cache name 会在 RedisCacheManager 的

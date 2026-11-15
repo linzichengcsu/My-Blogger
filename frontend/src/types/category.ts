@@ -9,11 +9,7 @@ export interface CategoryDTO {
   updatedAt?: string
   name?: string
   description?: string
-  parentCategoryId?: number
-  parentCategoryName?: string
   articleCount?: number
-  /** 子收藏夹（树形返回时嵌套） */
-  subCategories?: CategoryDTO[]
 }
 
 /** 创建/更新收藏夹请求 */
@@ -21,17 +17,6 @@ export interface CategoryRequest {
   /** 2-20 字符，必填 */
   name: string
   description?: string
-  parentCategoryId?: number
-}
-
-/** 收藏夹树节点（用于前端下拉选择器，children 为递归子节点） */
-export interface CategoryTreeDTO {
-  id?: number
-  name?: string
-  description?: string
-  articleCount?: number
-  /** 子节点（后端 buildCategoryTree 递归填充，叶子节点为空数组） */
-  children?: CategoryTreeDTO[]
 }
 
 /** 收藏夹统计（文章数、占比） */

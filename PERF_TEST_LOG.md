@@ -1,4 +1,4 @@
-# 缓存性能测试
+# 性能测试
 
 ## 一、雪崩专项测试
 
@@ -136,4 +136,11 @@ py scripts/loadtest/py/benetration.py
   MySQL Com_select 增量:  4  (1 次业务回源 × 业务内 SELECT 次数 ≈ 4)
 
   ==== 判定: PASS ====
+```
+
+## 四、并发正确性测试
+```
+  2026-11-09T17:03:44.088+08:00  INFO 25868 --- [My_Personal_Blogger] [           main] c.M.c.AbstractConcurrentCorrectnessTest  : [like-dedup] OK threads=60 wall=85ms success=60 accepted=1 errors=0 latency(min/avg/max)=65.88/76.26/85.15ms throughput=705.9 ops/s
+  2026-11-09T17:03:44.261+08:00  INFO 25868 --- [My_Personal_Blogger] [           main] c.M.c.AbstractConcurrentCorrectnessTest  : [like-count] OK threads=80 wall=50ms success=80 accepted=80 errors=0 latency(min/avg/max)=5.16/24.82/46.03ms throughput=1600.0 ops/s
+  2026-11-09T17:03:44.443+08:00  INFO 25868 --- [My_Personal_Blogger] [           main] c.M.c.AbstractConcurrentCorrectnessTest  : [view-count] OK threads=200 wall=135ms success=200 accepted=200 errors=0 latency(min/avg/max)=28.57/79.38/131.58ms throughput=1481.5 ops/s
 ```

@@ -131,3 +131,31 @@
 - 统一时间管理逻辑：实体层时间字段改用 `java.time.Instant` 并按 UTC 存储，DTO 层通过新增的 `DateTimeUtils` 工具类统一格式化，配合 Hibernate `time_zone: UTC`，彻底消除前后端时区歧义
 - 启用 `application-dev.yml` 与 `application-prod.yml` 中此前被注释的 `app.smtp` 配置段，使 `SMTP_*` 环境变量能正确绑定到邮件服务属性，修复配置注入不生效的问题
 - 邮件 From 头对发件人显示名按 RFC 2047 进行 Base64 编码，避免非 ASCII 字符或空格引发 SMTP 地址解析异常（如 "Domain contains illegal character"），降低邮件被拒收或进入垃圾箱的概率
+
+## [1.0.4] - 2026-11-15
+
+### ✨ 新增功能
+
+- 新增一键并发/性能测试脚本 `scripts/concurrent-test/run.cmd`（PowerShell 5+），支持 `-All` / `-MysqlOnly` / `-Perf` / `-TestPattern` 选择测试范围，并可通过 `-Scale` / `-Threads` / `-Profile`（smoke / default / high / extreme）在不改源码的前提下调整压测压力
+- 新增 Docker 环境一体化压测脚本 `scripts/loadtest-docker/run.cmd`：自动拉起隔离的压测栈（`deploy/docker-compose.loadtest.yml`）→ 等待健康检查 → 运行容器化 k6 → 输出汇总 → 可选拆栈，宿主机无需安装 k6
+- 新增基于 Testcontainers 的并发正确性测试 `ConcurrentCorrectnessTest` / `MysqlConcurrentCorrectnessTest`，用真实 MySQL 复现生产语义（`INSERT IGNORE` 静默去重、InnoDB 行级锁），Docker 不可用时自动跳过，默认 `mvn test` 不依赖 Docker
+- 新增 `StressParams` 统一压测参数类，压测线程数、循环次数、批量大小等可通过 `-Dstress.*` 系统属性覆盖
+
+### 🔧 优化变更
+
+- **收藏夹（Category）扁平化（不兼容变更）**：移除父子层级，所有收藏夹平级；删除 `GET /api/categories/top-level`、`/tree`、`/my/tree`、`/{categoryId}/subcategories`、`/{categoryId}/path`、`/{categoryId}/article-count`、`/stats/top-level` 接口及 `CategoryTreeDTO`；`CategoryDTO` / `CategoryRequest` 移除 `parentCategoryId`、`parentCategoryName`、`subCategories` 字段；新增 Flyway 迁移 `V6__flatten_categories.sql` 删除 `categories.parent_category_id` 列及其外键
+- 同步精简收藏夹服务与仓储层：删除树构建、路径查询、子分类统计、顶级分类查询等冗余逻辑，收藏夹缓存移除 `category:tree`，只保留 `category:list`（1 小时）/ `category:detail`（30 分钟）/ `category:stats`（10 分钟）
+- JWT 认证改为按角色继承构建权限（`SUPER_ADMIN` ⊃ `ADMIN` ⊃ `USER`），使 `@PreAuthorize("hasRole('ADMIN')")` 对超级管理员同样生效，与 `SecurityContextUtil.isAdmin()` 语义保持一致
+- `loadtest` profile 下放开 `GET /api/categories/**` 匿名访问，便于压测收藏夹只读接口的缓存命中率（生产环境仍需鉴权）
+- 前端收藏夹管理页与写文章页改为平级结构：移除树形选择器（`TreeSelect`）与树拍平逻辑，直接使用收藏夹列表作为下拉/多选选项
+- 测试环境 H2 会话锁超时提升至 60s（`SET LOCK_TIMEOUT 60000`），避免高并发压测时队尾线程抛 `LockTimeoutException` 造成结果失真
+
+### 🐛 已修复的重要问题
+
+- 修复公开的作者文章列表接口 `GET /api/articles/author/{authorId}` 对匿名访客返回 403 的问题：改用不校验归属权的 `getUserProfile`，避免触发 `validateOwnershipOrAdmin`
+- 修复分类树逻辑与收藏夹实际需求不一致导致的服务层臃肿、缓存键冗余与查询开销问题（随收藏夹扁平化一并移除）
+
+### 📖 新增文档
+
+- 新增 `PERF_TEST_LOG.md`（由 `CACHE_TEST_LOG.md` 重命名并扩充），补充雪崩 / 穿透 / 击穿专项测试与并发正确性测试的指令与结果记录
+- 更新 `docs/docker-redis-elasticsearch-deployment.md` 中的缓存键说明与故障排查示例（`category:tree` → `category:list`）
