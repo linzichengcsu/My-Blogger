@@ -95,6 +95,13 @@
             <artifactId>spring-boot-starter-mail</artifactId>
         </dependency>
 
+        <!-- MinIO Java SDK（S3 兼容对象存储，file.type=minio 时激活） -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.17</version>
+        </dependency>
+
 		<!-- 开发工具 -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

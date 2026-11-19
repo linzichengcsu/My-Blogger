@@ -1,5 +1,3 @@
-# syntax=docker/dockerfile:1
-
 # ---------- 构建阶段 ----------
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /build

@@ -18,4 +18,21 @@ public class FileStorageProperties {
     private long maxFileSize = 5 * 1024 * 1024; // 5MB
 
     private String[] allowedFileTypes = {"image/jpeg", "image/png", "image/gif", "image/webp"};
+
+    // ==================== MinIO / S3 兼容后端配置（file.type=minio 时使用） ====================
+
+    /** MinIO / S3 服务端点，如 http://localhost:9000 */
+    private String endpoint;
+
+    /** 访问密钥（Access Key） */
+    private String accessKey;
+
+    /** 秘密密钥（Secret Key） */
+    private String secretKey;
+
+    /** 对象存储桶名 */
+    private String bucket;
+
+    /** 是否使用 TLS（https）连接端点 */
+    private boolean useSsl = false;
 }

@@ -66,6 +66,25 @@ services:
     networks: [blognet]
     # ports: ["127.0.0.1:9200:9200"]
 
+  # MinIO 对象存储（S3 兼容，开发/生产通用）
+  #   API 端口 9000（后端内网连接），Console 9001（浏览器管理 bucket）
+  #   默认账号 minioadmin/minioadmin，生产务必通过 MINIO_ROOT_USER/PASSWORD 覆盖
+  minio:
+    image: minio/minio:latest
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:-minioadmin}
+    volumes:
+      - miniodata:/data
+    # healthcheck 已移除（scratch 基础镜像里无 curl 等工具，MinIO 本身日志已证明服务就绪）
+    # 如需健康检查，改用带 curl 的基础镜像（如 alpine）重建镜像
+    networks: [blognet]
+    # 开发时放开 Console 管理界面（仅本机访问），生产建议注释掉
+    ports:
+      - "127.0.0.1:9001:9001"
+
   # 自建本地 SMTP 引擎：捕获所有外发邮件，无需真实邮箱（开发/演示用）
   #   SMTP 端口 1025（后端连此），Web 收件箱 8025（浏览器查看验证码）
   #   仅绑定 127.0.0.1，不对公网开放
@@ -87,6 +106,7 @@ services:
       mysql: { condition: service_healthy }
       redis: { condition: service_healthy }
       es:    { condition: service_healthy }
+      minio: { condition: service_started }
       mailhog: { condition: service_started }
     environment:
       SPRING_PROFILES_ACTIVE: prod
@@ -115,6 +135,13 @@ services:
       SMTP_FROM_NAME: ${SMTP_FROM_NAME:-行吟博客}
       SMTP_SSL_ENABLE: ${SMTP_SSL_ENABLE:-false}
       SMTP_STARTTLS_ENABLE: ${SMTP_STARTTLS_ENABLE:-false}
+      # —— 对象存储（MinIO）——
+      # 默认仍用本地磁盘；要切换 MinIO，在 .env 置 FILE_TYPE=minio 并补全以下三行
+      FILE_TYPE: ${FILE_TYPE:-local}
+      MINIO_ENDPOINT: ${MINIO_ENDPOINT:-http://minio:9000}
+      MINIO_ACCESS_KEY: ${MINIO_ACCESS_KEY:-minioadmin}
+      MINIO_SECRET_KEY: ${MINIO_SECRET_KEY:-minioadmin}
+      MINIO_BUCKET: ${MINIO_BUCKET:-blog}
       JAVA_OPTS: "-XX:MaxRAMPercentage=75.0 -XX:+ExitOnOutOfMemoryError"
     volumes:
       - uploads:/var/www/uploads    # 用户上传图片，删容器不丢
@@ -147,6 +174,7 @@ volumes:
   mysqldata:
   redisdata:
   esdata:
+  miniodata:
   uploads:
   logs:
 
