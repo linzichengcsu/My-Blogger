@@ -11,7 +11,9 @@ import csulzc.My_Personal_Blogger.search.ArticleIndexPayload;
 import csulzc.My_Personal_Blogger.search.ArticleSearchService;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import csulzc.My_Personal_Blogger.service.infrastructure.ArticleStatService;
+import csulzc.My_Personal_Blogger.notification.NotificationTriggeredEvent;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
@@ -27,6 +29,7 @@ import jakarta.validation.Valid;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 @Transactional(readOnly = true)
@@ -365,7 +368,32 @@ public class ArticleService {
     @Transactional(propagation = Propagation.NOT_SUPPORTED)
     public boolean likeArticle(Long articleId) {
         Long userId = securityContextUtil.getCurrentUserId();
-        return articleStatService.recordLike(articleId, userId);
+        boolean accepted = articleStatService.recordLike(articleId, userId);
+        if (accepted) {
+            publishLikeArticleNotification(articleId, userId);
+        }
+        return accepted;
+    }
+
+    /**
+     * 文章首次点赞后，异步通知文章作者（不通知自己）。
+     *
+     * <p>点赞操作为 NOT_SUPPORTED 无事务，事件监听器 fallbackExecution=true 时会立即执行，
+     * 不依赖主流程事务提交。</p>
+     */
+    private void publishLikeArticleNotification(Long articleId, Long likerId) {
+        try {
+            articleRepository.findById(articleId).ifPresent(article -> {
+                Long authorId = article.getAuthor().getId();
+                if (!authorId.equals(likerId)) {
+                    applicationEventPublisher.publishEvent(NotificationTriggeredEvent.ofLikeArticle(
+                            this, authorId, likerId, article.getTitle(), articleId));
+                }
+            });
+        } catch (Exception e) {
+            // 通知失败不影响点赞结果
+            log.warn("发布点赞通知失败 articleId={} likerId={}: {}", articleId, likerId, e.getMessage());
+        }
     }
 
     /**

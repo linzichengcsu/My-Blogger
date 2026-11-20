@@ -19,6 +19,7 @@ import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-
 import { useAuth } from '@/context/AuthContext'
 import { ROUTES } from '@/constants/routes'
 import { displayName, fileUrl } from '@/utils'
+import NotificationBell from './NotificationBell'
 
 const { Header, Content, Footer } = Layout
 const { Text } = Typography
@@ -109,6 +110,7 @@ export default function SiteLayout() {
                   管理后台
                 </Button>
               )}
+              <NotificationBell />
               <Dropdown menu={{ items: userMenu, onClick: onUserMenuClick }} placement="bottomRight">
                 <Space size={8} style={{ cursor: 'pointer' }}>
                   <Avatar src={fileUrl(user?.avatar)} style={{ backgroundColor: '#fa541c' }}>
