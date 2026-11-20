@@ -296,6 +296,9 @@ export default function ArticleDetailPage() {
           {article.categories?.map((c) => (
             <Tag key={c.id} color="orange" style={{ marginInlineEnd: 0 }}>{c.name}</Tag>
           ))}
+          {article.tags?.map((t) => (
+            <Tag key={t} color="blue" style={{ marginInlineEnd: 0 }}>{t}</Tag>
+          ))}
         </Space>
 
         {article.coverImage && (

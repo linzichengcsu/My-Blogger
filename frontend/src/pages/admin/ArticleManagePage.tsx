@@ -93,6 +93,16 @@ export default function ArticleManagePage() {
         </Space>
       ),
     },
+    {
+      title: '标签',
+      dataIndex: 'tags',
+      width: 160,
+      render: (_: unknown, row: ArticleListItemDTO) => (
+        <Space size={4} wrap>
+          {row.tags?.map((t) => <Tag key={t} color="blue" style={{ marginInlineEnd: 0 }}>{t}</Tag>) ?? '-'}
+        </Space>
+      ),
+    },
     { title: '点赞', dataIndex: 'likeCount', width: 70 },
     { title: '评论', dataIndex: 'commentCount', width: 70 },
     { title: '创建时间', dataIndex: 'createdAt', width: 110, render: (v: string) => formatDate(v) },

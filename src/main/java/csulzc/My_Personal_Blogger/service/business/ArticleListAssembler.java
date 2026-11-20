@@ -29,6 +29,7 @@ public class ArticleListAssembler {
 
     private final ArticleRepository articleRepository;
     private final CommentRepository commentRepository;
+    private final TagService tagService;
 
     /**
      * 由 JPA 分页结果组装列表响应（列表页 / 作者列表 / LIKE 降级搜索共用）。
@@ -39,12 +40,14 @@ public class ArticleListAssembler {
 
         Map<Long, Long> commentCounts = loadCommentCounts(articleIds);
         Map<Long, Set<Category>> categoryMap = loadCategoryMappings(articleIds);
+        Map<Long, List<String>> tagMap = tagService.getTagNamesByArticleIds(articleIds);
 
         List<ArticleListItemDTO> content = articles.stream()
                 .map(article -> convertToListItemDTO(
                         article,
                         commentCounts.getOrDefault(article.getId(), 0L),
-                        categoryMap.getOrDefault(article.getId(), Set.of())))
+                        categoryMap.getOrDefault(article.getId(), Set.of()),
+                        tagMap.getOrDefault(article.getId(), List.of())))
                 .collect(Collectors.toList());
 
         return PageResponseDTO.<ArticleListItemDTO>builder()
@@ -92,13 +95,15 @@ public class ArticleListAssembler {
 
         Map<Long, Long> commentCounts = loadCommentCounts(orderedIds);
         Map<Long, Set<Category>> categoryMap = loadCategoryMappings(orderedIds);
+        Map<Long, List<String>> tagMap = tagService.getTagNamesByArticleIds(orderedIds);
 
         List<ArticleListItemDTO> content = orderedArticles.stream()
                 .map(article -> {
                     ArticleListItemDTO dto = convertToListItemDTO(
                             article,
                             commentCounts.getOrDefault(article.getId(), 0L),
-                            categoryMap.getOrDefault(article.getId(), Set.of()));
+                            categoryMap.getOrDefault(article.getId(), Set.of()),
+                            tagMap.getOrDefault(article.getId(), List.of()));
                     Map<String, String> hl = highlights != null ? highlights.get(article.getId()) : null;
                     if (hl != null) {
                         dto.setHighlightTitle(hl.get("title"));
@@ -145,9 +150,10 @@ public class ArticleListAssembler {
     }
 
     /**
-     * 转换为 ArticleListItemDTO（列表场景：评论数与分类由批量查询预加载，不再访问懒加载集合）
+     * 转换为 ArticleListItemDTO（列表场景：评论数、分类与标签由批量查询预加载，不再访问懒加载集合）
      */
-    private ArticleListItemDTO convertToListItemDTO(Article article, long commentCount, Set<Category> categories) {
+    private ArticleListItemDTO convertToListItemDTO(Article article, long commentCount,
+                                                    Set<Category> categories, List<String> tags) {
         return ArticleListItemDTO.builder()
                 .id(article.getId())
                 .title(article.getTitle())
@@ -159,6 +165,7 @@ public class ArticleListAssembler {
                 .commentCount((int) commentCount)
                 .author(convertToUserProfileDTO(article.getAuthor()))
                 .categories(convertToCategoryDTOs(categories))
+                .tags(tags)
                 .build();
     }
 

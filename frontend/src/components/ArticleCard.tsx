@@ -55,6 +55,11 @@ export default function ArticleCard({ article }: { article: ArticleListItemDTO }
                 {c.name}
               </Tag>
             ))}
+            {article.tags?.slice(0, 3).map((t) => (
+              <Tag key={t} color="blue" style={{ marginInlineEnd: 0 }}>
+                {t}
+              </Tag>
+            ))}
             <span style={{ marginLeft: 'auto' }}>
               <Space size={12}>
                 <Text type="secondary">

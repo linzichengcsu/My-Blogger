@@ -43,6 +43,8 @@ public class ArticleService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final ArticleLikeRepository articleLikeRepository;
+    private final ArticleTagRepository articleTagRepository;
+    private final TagService tagService;
     private final ArticleStatService articleStatService;
     private final SecurityContextUtil securityContextUtil;
     private final ArticleSearchService articleSearchService;
@@ -81,6 +83,11 @@ public class ArticleService {
         }
 
         Article savedArticle = articleRepository.save(article);
+
+        // 保存标签关联（不存在的标签按名称自动创建）
+        if (request.getTags() != null) {
+            tagService.saveArticleTags(savedArticle.getId(), request.getTags());
+        }
 
         // 事务提交后同步到 Elasticsearch（AFTER_COMMIT 监听器消费，失败不影响主流程）
         publishIndexEvent(savedArticle);
@@ -143,6 +150,11 @@ public class ArticleService {
         }
 
         Article updatedArticle = articleRepository.save(article);
+
+        // 重建标签关联：传 null 表示不修改，传空集合表示清空
+        if (request.getTags() != null) {
+            tagService.saveArticleTags(articleId, request.getTags());
+        }
 
         // 事务提交后同步到 Elasticsearch（覆盖旧文档）
         publishIndexEvent(updatedArticle);
@@ -282,6 +294,7 @@ public class ArticleService {
         // 先删分类关联与评论（各一条批量 SQL），再删文章本身；
         // 评论先删回复再删顶级，避免自引用外键约束冲突
         articleRepository.deleteCategoryMappings(articleId);
+        articleTagRepository.deleteByArticleId(articleId);
         articleLikeRepository.deleteByArticleId(articleId);
         commentRepository.deleteRepliesByArticle(article);
         commentRepository.deleteTopLevelByArticle(article);
@@ -303,6 +316,7 @@ public class ArticleService {
             commentRepository.batchDeleteRepliesByArticleIds(batch);
             commentRepository.batchDeleteTopLevelByArticleIds(batch);
             articleRepository.batchDeleteCategoryMappings(batch);
+            articleTagRepository.deleteByArticleIdIn(batch);
             articleLikeRepository.deleteByArticleIdIn(batch);
             total += articleRepository.batchDeleteByIds(batch);
             // 事务提交后从 Elasticsearch 批量删除
@@ -442,6 +456,7 @@ public class ArticleService {
                 .commentCount((int) commentRepository.countByArticle(article))
                 .author(articleListAssembler.convertToUserProfileDTO(article.getAuthor()))
                 .categories(articleListAssembler.convertToCategoryDTOs(article.getCategories()))
+                .tags(tagService.getTagNamesByArticleId(article.getId()))
                 .build();
     }
 
