@@ -1,6 +1,8 @@
 /**
  * 全站通知铃铛（吸顶导航右侧）。
  * 未读数量徽标 + 弹出 Popover 展示最近 5 条通知。
+ *
+ * 通知状态已迁移为 Zustand notificationStore（stores/notificationStore.ts）。
  */
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Avatar, Badge, Button, List, Popover, Space, Typography, message } from 'antd'
@@ -8,8 +10,7 @@ import { BellOutlined, CheckOutlined, ClearOutlined } from '@ant-design/icons'
 import dayjs from 'dayjs'
 import relativeTime from 'dayjs/plugin/relativeTime'
 import 'dayjs/locale/zh-cn'
-import * as notificationApi from '@/api/notification'
-import type { NotificationCountDTO, NotificationDTO } from '@/types'
+import { useNotificationStore } from '@/stores'
 import { fileUrl } from '@/utils'
 
 dayjs.extend(relativeTime)
@@ -28,37 +29,20 @@ const TYPE_ICON: Record<string, string> = {
 
 export default function NotificationBell() {
   const [open, setOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [counts, setCounts] = useState<NotificationCountDTO>({ unread: 0, total: 0 })
-  const [notifications, setNotifications] = useState<NotificationDTO[]>([])
+  const fetchCounts = useNotificationStore((s) => s.fetchCounts)
+  const fetchList = useNotificationStore((s) => s.fetchList)
+  const markAllRead = useNotificationStore((s) => s.markAllRead)
+  const markOneRead = useNotificationStore((s) => s.markOneRead)
+  const counts = useNotificationStore((s) => s.counts)
+  const notifications = useNotificationStore((s) => s.notifications)
+  const loading = useNotificationStore((s) => s.loading)
+
   const pollRef = useRef<number | null>(null)
 
-  /** 拉取未读数（轻量，每次打开 Popover 和每 60s 轮询） */
-  const fetchCounts = useCallback(async () => {
-    try {
-      setCounts(await notificationApi.getNotificationCounts())
-    } catch {
-      // 未登录或网络错误时静默忽略
-    }
-  }, [])
-
-  /** 拉取最近通知列表（打开 Popover 时调用） */
-  const fetchList = useCallback(async () => {
-    setLoading(true)
-    try {
-      const page = await notificationApi.listNotifications({ page: 0, size: 10 })
-      setNotifications(page.content ?? [])
-    } catch {
-      // 静默忽略
-    } finally {
-      setLoading(false)
-    }
-  }, [])
-
   useEffect(() => {
-    fetchCounts()
+    fetchCounts(true)
     // 60s 轮询未读数
-    pollRef.current = window.setInterval(fetchCounts, 60_000)
+    pollRef.current = window.setInterval(() => fetchCounts(true), 60_000)
     return () => {
       if (pollRef.current) window.clearInterval(pollRef.current)
     }
@@ -67,38 +51,28 @@ export default function NotificationBell() {
   const handleOpenChange = (nextOpen: boolean) => {
     setOpen(nextOpen)
     if (nextOpen) {
-      fetchList()
+      void fetchList()
     }
   }
 
   const handleMarkAllRead = async () => {
     try {
-      await notificationApi.markAllNotificationsAsRead()
+      await markAllRead()
       message.success('已全部标记为已读')
-      setCounts((c) => ({ ...c, unread: 0 }))
-      setNotifications((list) => list.map((n) => ({ ...n, isRead: true })))
     } catch {
       message.error('操作失败')
     }
   }
 
-  const handleItemClick = async (n: NotificationDTO) => {
-    // 标记单条已读
+  const handleItemClick = useCallback(async (n: typeof notifications[number]) => {
     if (!n.isRead && n.id) {
-      try {
-        await notificationApi.markNotificationAsRead(n.id)
-        setCounts((c) => ({ ...c, unread: Math.max(0, c.unread - 1) }))
-        setNotifications((list) => list.map((x) => (x.id === n.id ? { ...x, isRead: true } : x)))
-      } catch {
-        // 静默忽略
-      }
+      void markOneRead(n.id)
     }
-    // 跳转到关联文章（前端可根据 articleId 路由）
     if (n.articleId) {
       window.open(`/articles/${n.articleId}`, '_blank', 'noopener')
     }
     setOpen(false)
-  }
+  }, [markOneRead])
 
   const content = (
     <div style={{ width: 360 }}>

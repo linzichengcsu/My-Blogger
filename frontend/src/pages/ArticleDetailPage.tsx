@@ -40,7 +40,7 @@ import {
   viewArticle,
 } from '@/api'
 import { ApiError } from '@/api/request'
-import { useAuth } from '@/context/AuthContext'
+import { useArticleStore, useAuthStore, useNotificationStore } from '@/stores'
 import type { ArticleDetailDTO, CommentDTO, CommentReplyDTO, PageResponse } from '@/types'
 import { ROUTES } from '@/constants/routes'
 import { displayName, fileUrl, formatDateTime, fromNow } from '@/utils'
@@ -81,7 +81,8 @@ function CommentItem({
   canManage: boolean
   reload: () => void
 }) {
-  const { user, isAdmin } = useAuth()
+  const user = useAuthStore((s) => s.user)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
   const [showEditor, setShowEditor] = useState(false)
   const [extraReplies, setExtraReplies] = useState<CommentReplyDTO[]>([])
   const [replyLoading, setReplyLoading] = useState(false)
@@ -174,7 +175,11 @@ export default function ArticleDetailPage() {
   const { id } = useParams<{ id: string }>()
   const articleId = Number(id)
   const navigate = useNavigate()
-  const { isLoggedIn, user, isAdmin } = useAuth()
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const user = useAuthStore((s) => s.user)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+  const patchArticle = useArticleStore((s) => s.patchArticle)
+  const refreshNotifications = useNotificationStore((s) => s.refresh)
 
   const [article, setArticle] = useState<ArticleDetailDTO | null>(null)
   const [loading, setLoading] = useState(true)
@@ -219,11 +224,16 @@ export default function ArticleDetailPage() {
     setLiking(true)
     try {
       await likeArticle(articleId)
-      setArticle((prev) =>
-        prev
-          ? { ...prev, isLiked: !prev.isLiked, likeCount: (prev.likeCount ?? 0) + (prev.isLiked ? -1 : 1) }
-          : prev,
-      )
+      setArticle((prev) => {
+        if (!prev) return prev
+        const nextLiked = !prev.isLiked
+        const nextCount = (prev.likeCount ?? 0) + (nextLiked ? 1 : -1)
+        // 同步到全局 store，让列表卡片上的点赞数也能立即更新
+        patchArticle(articleId, { isLiked: nextLiked, likeCount: nextCount })
+        return { ...prev, isLiked: nextLiked, likeCount: nextCount }
+      })
+      // 点赞可能触发新通知，刷新一下
+      refreshNotifications()
     } catch (err) {
       message.error(err instanceof ApiError ? err.message : '操作失败')
     } finally {
