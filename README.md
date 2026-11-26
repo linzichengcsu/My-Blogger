@@ -11,12 +11,12 @@
 [![Redis](https://img.shields.io/badge/Redis-7.4-%23ea527f)](https://redis.io/)
 [![ElasticSearch](https://img.shields.io/badge/ElasticSearch-9.4.5-%230057b7)](https://www.elastic.co/cn/)
 [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
-[![Release](https://img.shields.io/badge/release-v1.0.4-green)](https://github.com/linzichengcsu/My-Blogger/releases)
+[![Release](https://img.shields.io/badge/release-v1.1.0-green)](https://github.com/linzichengcsu/My-Blogger/releases)
 [![CI](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml/badge.svg)](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml)
 
 行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 19** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
 
-> **当前状态**：✅ v1.0.4 已公开发布，支持生产环境 Docker 部署。
+> **当前状态**：✅ v1.1.0 已公开发布，支持生产环境 Docker 部署。
 > **下一步规划**：考察微博、CSDN、掘金等博客类平台的功能，前后端同步调整代码。
 
 ---
@@ -53,19 +53,23 @@
 **内容管理**
 
 - [x] 文章 CRUD、发布 / 归档、批量操作、点赞、浏览计数
-- [x] 分类无限层级树（顶级分类 + 子分类查询）
+- [x] 文章标签系统：多标签关联、标签 CRUD、按标签筛选
+- [x] 分类（收藏夹）平级管理，归属创建者
 - [x] 评论发表、回复、审核、批量删除 / 批量审核
+- [x] 站内通知：评论发表 / 回复自动通知作者
 - [x] Markdown 渲染（CommonMark + GFM 表格扩展）
 
 **系统能力**
 
 - [x] Spring Cache + Redis 缓存，可开关（`app.cache.enabled`）
 - [x] 业务逻辑方法与中间件实现解耦合，可实现中间件故障时的降级处理
-- [x] 文件上传（本地磁盘存储）+ Base64 互转接口，类型白名单校验
+- [x] 文件上传：默认本地磁盘，支持切换 MinIO（S3 兼容对象存储）+ Base64 互转接口，类型白名单校验
 - [x] AOP 统一请求日志 + SQL 参数绑定打印 + 敏感字段脱敏
 - [x] Flyway 数据库迁移（生产环境）、HikariCP 连接池调优
 - [x] OpenAPI / Swagger UI 文档、Actuator + Prometheus 监控
-- [x] 开发 / 生产双环境配置隔离，测试环境使用 H2
+- [x] 开发 / 生产双环境配置隔离，测试环境使用 H2 数据库
+- [x] Zustand 全局状态管理（authStore / articleStore / notificationStore）
+- [x] 组件职责清晰：UI 展示 ↔ Store 状态 ↔ API 请求，避免 Props 层层透传
 
 ---
 
@@ -75,12 +79,12 @@
 |---------|----------------------------------------------------------------|
 | 语言 / 框架 | Java 21、Spring Boot 4.1.1                                      |
 | 持久层     | Spring Data JPA (Hibernate 6)、Flyway                           |
-| 数据库     | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）                           |
+| 数据库     | MySQL 9.7（dev/prod）、H2（测试）、Redis（缓存）、MinIO（对象存储）|
 | 安全      | Spring Security、JJWT 0.12.3、BCrypt                             |
 | 中间件     | Flyway、HikariCP、Actuator、Prometheus、ElasticSearch              |
 | 接口文档    | springdoc-openapi 3.1.1（Swagger UI）                            |
-| 前端模板    | React 19 + TypeScript 5.7 + Vite 6                              |
-| 其他      | Lombok、AOP、Actuator、CommonMark、commons-lang3                   |
+| 前端模板    | React 19 + TypeScript 5.7 + Vite 6 + Zustand                    |
+| 其他      | Lombok、AOP、Actuator、CommonMark、commons-lang3、MinIO SDK 8.5.17 |
 | 测试      | JUnit 5、Mockito、AssertJ、Spring Boot Test、Vitest、Testing Library |
 
 ---
@@ -199,9 +203,11 @@ docker compose down
 |---|---|---|
 | 用户 | `/api/users` | 注册、登录、刷新、`/me` 个人中心、用户管理（部分 ADMIN） |
 | 文章 | `/api/articles` | CRUD、发布 / 归档、搜索、批量操作、点赞 / 浏览 |
-| 分类 | `/api/categories` | 分类 CRUD、树查询 |
+| 标签 | `/api/tags` | 标签 CRUD、公开浏览、文章标签关联 |
+| 分类 | `/api/categories` | 分类 CRUD |
 | 评论 | `/api/comments` | 评论 / 回复、审核、批量操作 |
-| 文件 | `/api/files` | 上传、Base64 转换 |
+| 通知 | `/api/notifications` | 未读数、列表、标记已读 |
+| 文件 | `/api/files` | 上传、Base64 转换、本地 / MinIO 双存储 |
 | 管理端 | `/api/admin` | 看板统计（ADMIN） |
 
 统一响应结构为 `Result<T>`（`api.response.Result`），错误由全局异常处理器统一转换为标准格式。
