@@ -8,7 +8,7 @@ import { Button, Card, Form, Input, message, Steps, Typography } from 'antd'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { forgotPassword, register, sendPasswordResetCode } from '@/api'
 import { ApiError } from '@/api/request'
-import { useAuth } from '@/context/AuthContext'
+import { useAuthStore } from '@/stores'
 import type { UserLoginRequest, UserPasswordCodeRequest, UserPasswordResetRequest, UserRegisterRequest } from '@/types'
 import { ROUTES } from '@/constants/routes'
 
@@ -44,7 +44,7 @@ function AuthCard({ title, children, footer }: { title: string; children: React.
 export function LoginPage() {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
+  const login = useAuthStore((s) => s.login)
   const [loading, setLoading] = useState(false)
   const from = (location.state as { from?: string } | null)?.from ?? ROUTES.home
 
@@ -185,7 +185,7 @@ export function ForgotPasswordPage() {
 
 export function RegisterPage() {
   const navigate = useNavigate()
-  const { login } = useAuth()
+  const login = useAuthStore((s) => s.login)
   const [form] = Form.useForm<UserRegisterRequest>()
   const [loading, setLoading] = useState(false)
 

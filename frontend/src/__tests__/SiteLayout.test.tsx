@@ -3,17 +3,28 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom'
 
-const { authState } = vi.hoisted(() => ({
+const { authState, notificationState } = vi.hoisted(() => ({
   authState: {
     user: null as null | { displayName?: string; username?: string },
     isLoggedIn: false,
     isAdmin: false,
     logout: vi.fn(),
   },
+  notificationState: {
+    counts: { unread: 0, total: 0 },
+    notifications: [],
+    loading: false,
+    fetchCounts: vi.fn(),
+    fetchList: vi.fn(),
+    markAllRead: vi.fn(),
+    markOneRead: vi.fn(),
+  },
 }))
 
-vi.mock('@/context/AuthContext', () => ({
-  useAuth: () => authState,
+vi.mock('@/stores', () => ({
+  useAuthStore: (selector: (s: typeof authState) => unknown) => selector(authState),
+  useNotificationStore: (selector: (s: typeof notificationState) => unknown) =>
+    selector(notificationState),
 }))
 
 import SiteLayout from '@/components/SiteLayout'

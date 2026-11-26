@@ -85,7 +85,9 @@ public class SecurityConfig {
                     if (isLoadTestProfile()) {
                         auth.requestMatchers(HttpMethod.GET, "/api/categories/**").permitAll();
                     }
-                    auth.requestMatchers("/api/categories/**").authenticated()
+                    auth.requestMatchers(HttpMethod.GET, "/api/tags/**").permitAll()
+                            .requestMatchers("/api/tags/**").authenticated()
+                            .requestMatchers("/api/categories/**").authenticated()
                             .requestMatchers("/api/comments/**").authenticated()
                             .requestMatchers(HttpMethod.GET, "/api/files/**").permitAll()
                             .requestMatchers("/api/files/**").authenticated()

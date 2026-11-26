@@ -31,7 +31,7 @@ import static org.mockito.Mockito.*;
 
 @DataJpaTest
 @ActiveProfiles("test")
-@Import({ArticleService.class, CategoryService.class, SecurityContextUtil.class,
+@Import({ArticleService.class, CategoryService.class, TagService.class, SecurityContextUtil.class,
         ArticleListAssembler.class, ArticleSearchService.class, csulzc.My_Personal_Blogger.config.ElasticsearchProperties.class})
 @DisplayName("ArticleService 测试")
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
@@ -56,6 +56,15 @@ public class ArticleServiceTest {
 
     @Autowired
     private UserRepository userRepository;
+
+    @Autowired
+    private TagRepository tagRepository;
+
+    @Autowired
+    private ArticleTagRepository articleTagRepository;
+
+    @Autowired
+    private TagService tagService;
 
     @Autowired
     private SecurityContextUtil securityContextUtil;
@@ -695,6 +704,77 @@ public class ArticleServiceTest {
 
         assertThat(articleLikeRepository.existsByArticleIdAndUserId(articleId, testUserId)).isFalse();
         assertThat(articleRepository.findById(articleId)).isEmpty();
+    }
+
+    @Test
+    @Order(29)
+    @DisplayName("测试创建文章 - 标签持久化并在详情中返回（含去重与空白归一化）")
+    void testCreateArticle_PersistsTags() {
+        ArticleCreateRequest request = ArticleCreateRequest.builder()
+                .title("带标签的文章")
+                .content("这是用于测试标签持久化的文章内容，长度足够二十个字符以上")
+                .tags(List.of("Java", "Spring", " Java "))
+                .status(Article.ArticleStatus.RELEASE)
+                .build();
+
+        ArticleDetailDTO result = articleService.createArticle(request);
+
+        assertThat(result.getTags()).containsExactlyInAnyOrder("Java", "Spring");
+        assertThat(tagRepository.findAll()).hasSize(2);
+        assertThat(articleTagRepository.findByArticleId(result.getId())).hasSize(2);
+    }
+
+    @Test
+    @Order(30)
+    @DisplayName("测试更新文章 - 标签被替换，传空集合则清空")
+    void testUpdateArticle_ReplacesAndClearsTags() {
+        tagService.saveArticleTags(testArticleId, List.of("旧标签"));
+
+        ArticleDetailDTO updated = articleService.updateArticle(testArticleId,
+                ArticleUpdateRequest.builder().tags(List.of("新标签1", "新标签2")).build());
+        assertThat(updated.getTags()).containsExactlyInAnyOrder("新标签1", "新标签2");
+        assertThat(articleTagRepository.findByArticleId(testArticleId)).hasSize(2);
+
+        ArticleDetailDTO cleared = articleService.updateArticle(testArticleId,
+                ArticleUpdateRequest.builder().tags(List.of()).build());
+        assertThat(cleared.getTags()).isEmpty();
+        assertThat(articleTagRepository.findByArticleId(testArticleId)).isEmpty();
+    }
+
+    @Test
+    @Order(31)
+    @DisplayName("测试标签 - 同名标签跨文章复用，不重复创建")
+    void testTags_ReusedAcrossArticles() {
+        ArticleCreateRequest r1 = ArticleCreateRequest.builder()
+                .title("文章甲").content("内容甲的长度足够二十个字符以上啊啊啊啊")
+                .tags(List.of("共享")).status(Article.ArticleStatus.RELEASE).build();
+        ArticleCreateRequest r2 = ArticleCreateRequest.builder()
+                .title("文章乙").content("内容乙的长度足够二十个字符以上啊啊啊啊")
+                .tags(List.of("共享", "独有")).status(Article.ArticleStatus.RELEASE).build();
+
+        articleService.createArticle(r1);
+        articleService.createArticle(r2);
+
+        assertThat(tagRepository.findAll()).hasSize(2);
+        assertThat(tagRepository.findByName("共享")).isPresent();
+    }
+
+    @Test
+    @Order(32)
+    @DisplayName("测试删除文章 - 同步清理标签关联，但保留标签主表记录")
+    void testDeleteArticle_CleansUpTags() {
+        ArticleCreateRequest request = ArticleCreateRequest.builder()
+                .title("待删带标签文章").content("内容长度足够二十个字符以上啊啊啊啊")
+                .tags(List.of("清理测试")).status(Article.ArticleStatus.RELEASE).build();
+        Long id = articleService.createArticle(request).getId();
+
+        assertThat(articleTagRepository.findByArticleId(id)).hasSize(1);
+
+        setCurrentUser(testUserId);
+        articleService.deleteArticle(id);
+
+        assertThat(articleTagRepository.findByArticleId(id)).isEmpty();
+        assertThat(tagRepository.findByName("清理测试")).isPresent();
     }
 
 }

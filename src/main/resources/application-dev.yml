@@ -92,7 +92,8 @@ jwt:
   header: Authorization
 
 file:
-  type: local
+  # 存储后端：local（本地磁盘，默认）| minio（对象存储，需 docker 拉 MinIO 服务）
+  type: minio
   upload-dir: uploads
   max-file-size: 5242880
   allowed-file-types:
@@ -100,6 +101,11 @@ file:
     - image/png
     - image/gif
     - image/webp
+  endpoint: http://localhost:9000
+  access-key: minioadmin
+  secret-key: minioadmin
+  bucket: blog
+  use-ssl: false
 
 springdoc:
   api-docs:

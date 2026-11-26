@@ -24,6 +24,7 @@ public class ArticleListItemDTO extends BaseDTO {
     private String coverImage;
     private UserProfileDTO author;
     private List<CategoryDTO> categories;
+    private List<String> tags;
     private Instant createdAt;
     private Article.ArticleStatus status;
     private Integer likeCount;

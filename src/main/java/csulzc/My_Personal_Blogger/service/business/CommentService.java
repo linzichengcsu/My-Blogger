@@ -11,9 +11,11 @@ import csulzc.My_Personal_Blogger.domain.entity.User;
 import csulzc.My_Personal_Blogger.repository.ArticleRepository;
 import csulzc.My_Personal_Blogger.repository.CommentRepository;
 import csulzc.My_Personal_Blogger.repository.UserRepository;
+import csulzc.My_Personal_Blogger.notification.NotificationTriggeredEvent;
 import csulzc.My_Personal_Blogger.security.SecurityContextUtil;
 import jakarta.persistence.EntityNotFoundException;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -52,6 +54,7 @@ public class CommentService {
     private final ArticleRepository articleRepository;
     private final UserRepository userRepository;
     private final SecurityContextUtil securityContextUtil;
+    private final ApplicationEventPublisher eventPublisher;
 
     // ==================== 评论创建与删除 ====================
 
@@ -84,7 +87,39 @@ public class CommentService {
         Comment comment = commentBuilder.build();
         Comment savedComment = commentRepository.save(comment);
 
+        // 发布通知事件（AFTER_COMMIT 后由监听器落库）
+        publishCommentNotification(savedComment, article, commenter, request.getContent());
+
         return convertToDTO(savedComment);
+    }
+
+    /**
+     * 根据评论类型发布通知：
+     * - 顶级评论 → 通知文章作者（不通知自己）
+     * - 回复     → 通知父评论作者（不通知自己）
+     */
+    private void publishCommentNotification(Comment savedComment, Article article, User commenter, String preview) {
+        Long commenterId = commenter.getId();
+
+        if (savedComment.getParentComment() == null) {
+            // 顶级评论：通知文章作者
+            Long articleAuthorId = article.getAuthor().getId();
+            if (!articleAuthorId.equals(commenterId)) {
+                eventPublisher.publishEvent(NotificationTriggeredEvent.ofComment(
+                        this, articleAuthorId, commenterId,
+                        article.getTitle(), preview,
+                        article.getId(), savedComment.getId()));
+            }
+        } else {
+            // 回复：通知父评论的评论者
+            Long parentCommenterId = savedComment.getParentComment().getCommenter().getId();
+            if (!parentCommenterId.equals(commenterId)) {
+                eventPublisher.publishEvent(NotificationTriggeredEvent.ofReply(
+                        this, parentCommenterId, commenterId,
+                        article.getTitle(), preview,
+                        article.getId(), savedComment.getId()));
+            }
+        }
     }
 
     /**

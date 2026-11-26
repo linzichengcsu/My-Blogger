@@ -13,7 +13,7 @@
 
 	<groupId>io.github.linzichengcsu</groupId>
 	<artifactId>blog</artifactId>
-	<version>1.0.4</version>
+	<version>1.1.0</version>
 	<name>xingyin-blog</name>
 	<description>行吟博客 —— 基于 Spring Boot 4 与 React 19 构建的个人博客系统</description>
 
@@ -93,6 +93,13 @@
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-mail</artifactId>
+        </dependency>
+
+        <!-- MinIO Java SDK（S3 兼容对象存储，file.type=minio 时激活） -->
+        <dependency>
+            <groupId>io.minio</groupId>
+            <artifactId>minio</artifactId>
+            <version>8.5.17</version>
         </dependency>
 
 		<!-- 开发工具 -->

@@ -11,7 +11,7 @@ import ArticleCard from '@/components/ArticleCard'
 import { getArticleList, searchArticles } from '@/api'
 import type { ArticleListItemDTO, PageResponse } from '@/types'
 import { ROUTES } from '@/constants/routes'
-import { useAuth } from '@/context/AuthContext'
+import { useArticleStore, useAuthStore } from '@/stores'
 
 const { Title, Paragraph, Text } = Typography
 const PAGE_SIZE = 8
@@ -19,7 +19,8 @@ const PAGE_SIZE = 8
 export default function HomePage() {
   const navigate = useNavigate()
   const [searchParams] = useSearchParams()
-  const { isLoggedIn } = useAuth()
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const hydrateList = useArticleStore((s) => s.hydrateList)
   const keyword = searchParams.get('keyword') ?? ''
   const page = Number(searchParams.get('page') ?? 0)
 
@@ -33,10 +34,11 @@ export default function HomePage() {
         ? await searchArticles(keyword, { page, size: PAGE_SIZE, sortBy: 'createdAt', sortDirection: 'desc' })
         : await getArticleList({ page, size: PAGE_SIZE, sortBy: 'createdAt', sortDirection: 'desc' })
       setData(res)
+      hydrateList(res.content)
     } finally {
       setLoading(false)
     }
-  }, [keyword, page])
+  }, [keyword, page, hydrateList])
 
   useEffect(() => {
     void load()

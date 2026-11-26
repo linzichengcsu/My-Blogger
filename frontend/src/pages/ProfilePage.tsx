@@ -50,7 +50,7 @@ import {
   uploadFile,
 } from '@/api'
 import { ApiError } from '@/api/request'
-import { useAuth } from '@/context/AuthContext'
+import { useAuthStore } from '@/stores'
 import type {
   ArticleListItemDTO,
   CategoryDTO,
@@ -71,7 +71,7 @@ const { Title, Paragraph, Text } = Typography
 
 function PublicProfile({ userId }: { userId: number }) {
   const navigate = useNavigate()
-  const { user: me } = useAuth()
+  const me = useAuthStore((s) => s.user)
   const [profile, setProfile] = useState<UserProfileDTO | null>(null)
   const [articles, setArticles] = useState<PageResponse<ArticleListItemDTO> | null>(null)
   const [page, setPage] = useState(0)
@@ -141,7 +141,9 @@ function PublicProfile({ userId }: { userId: number }) {
 /* ---------------- 当前用户个人中心 ---------------- */
 
 function MyProfile() {
-  const { user, setUser, refreshUser } = useAuth()
+  const user = useAuthStore((s) => s.user)
+  const setUser = useAuthStore((s) => s.setUser)
+  const refreshUser = useAuthStore((s) => s.refreshUser)
   const navigate = useNavigate()
   const [profileForm] = Form.useForm<UserUpdateRequest>()
   const [pwdForm] = Form.useForm<UserPasswordChangeRequest>()

@@ -159,3 +159,45 @@
 
 - 新增 `PERF_TEST_LOG.md`（由 `CACHE_TEST_LOG.md` 重命名并扩充），补充雪崩 / 穿透 / 击穿专项测试与并发正确性测试的指令与结果记录
 - 更新 `docs/docker-redis-elasticsearch-deployment.md` 中的缓存键说明与故障排查示例（`category:tree` → `category:list`）
+
+## [1.1.0] - 2026-11-26
+
+### ✨ 新增功能
+
+**标签系统**
+- 新增文章标签（Tag）功能：标签 CRUD、文章多标签关联，后端 `TagController` + `TagService` + `TagRepository` + `ArticleTagRepository`，DTO 含 `TagDTO` / `TagRequest`
+- 前端 Tags API、类型定义、写文章页标签选择器、文章详情页标签展示、管理后台文章标签管理
+- Flyway 迁移 `V8__create_tags.sql` 新建 `tags` 与 `article_tags` 关联表
+- `GET /api/tags/**` 放行匿名访问，其余操作需鉴权
+
+**通知系统**
+- 新增站内通知（Notification）功能：评论发表/回复时自动通知作者，后端基于 Spring Event 机制（`NotificationTriggeredEvent` + `NotificationEventListener`）
+- `NotificationController` 提供未读数查询、通知列表、标记已读等接口，DTO 含 `NotificationDTO` / `NotificationCountDTO`
+- 前端 `NotificationBell` 铃铛组件、实时未读计数、通知下拉面板
+- Flyway 迁移 `V7__create_notifications.sql` 新建 `notifications` 表
+
+**对象存储（MinIO）**
+- 文件存储从硬编码本地磁盘扩展为可切换的对象存储：新增 `MinioStorageService`（实现 `StorageService` 接口），默认仍用 `local`
+- 新增 MinIO Java SDK 8.5.17 依赖、`MinioConfig` 配置类
+- Docker Compose 内置 MinIO 服务（`minio:latest`，API 9000 + Console 9001），blog 服务 `depends_on` 自动等待 MinIO 就绪
+- 通过 `FILE_TYPE=minio` 环境变量或 `app.file.type=minio` 配置即可切换，无需改代码
+
+**前端状态管理**
+- 引入 [Zustand](https://github.com/pmndrs/zustand) 作为全局状态管理，替代散落在各组件中的 `useState` / Context 模式
+- 按业务拆分为 `authStore`（登录态与用户信息）、`articleStore`（文章列表与筛选）、`notificationStore`（通知未读与列表），入口统一从 `stores/index.ts` 导出
+- 重构 `App.tsx`、`SiteLayout`、`NotificationBell`、`HomePage`、`ProfilePage`、`ArticleDetailPage`、`AuthPage` 等组件改用 Store，消除 Props 层层透传
+
+### 🔧 优化变更
+
+- docker-compose.yml 新增 MinIO 服务（`miniodata` volume、127.0.0.1:9001 Console 端口），blog 服务容器内环境变量自动读取 MinIO 连接参数
+- `.env.example` 与 `deploy/.env.example` 补充完整 MinIO 配置段（含默认值与安全注释），生产务必覆盖 `MINIO_ROOT_USER` / `MINIO_ROOT_PASSWORD`
+- `application-dev.yml` 与 `application-prod.yml` 新增 `app.file.type=local` 默认值，与切换开关语义对齐
+- `SecurityConfig` 为 `/api/tags/**` 增加与 categories 同等的放行规则（`GET` 公开，其余需鉴权）
+
+### 🐛 已修复的重要问题
+
+- 修复 Dependabot 扫描到的 7 个前端依赖漏洞：升级若干 npm 包版本（涉及 `package-lock.json` 刷新，净减 656 行冗余依赖树）
+
+### 📖 新增文档
+
+- `.env.example` / `deploy/.env.example` 补充 MinIO 对象存储配置说明与默认值注释

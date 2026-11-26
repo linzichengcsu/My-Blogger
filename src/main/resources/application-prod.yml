@@ -92,7 +92,8 @@ jwt:
   header: Authorization
 
 file:
-  type: local
+  # 存储后端：local（本地磁盘，默认）| minio（对象存储，生产建议使用）
+  type: ${FILE_TYPE:local}
   upload-dir: /var/www/uploads
   max-file-size: 5242880
   allowed-file-types:
@@ -100,6 +101,12 @@ file:
     - image/png
     - image/gif
     - image/webp
+  # —— MinIO 对象存储（通过 compose 环境变量注入） ——
+  endpoint: ${MINIO_ENDPOINT:http://minio:9000}
+  access-key: ${MINIO_ACCESS_KEY}
+  secret-key: ${MINIO_SECRET_KEY}
+  bucket: ${MINIO_BUCKET:blog}
+  use-ssl: false
 
 # 生产环境关闭 API 文档端点（SecurityConfig 中 swagger 放行与此联动）
 springdoc:

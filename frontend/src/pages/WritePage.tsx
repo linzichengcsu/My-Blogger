@@ -24,9 +24,9 @@ import type { UploadProps } from 'antd'
 import { UploadOutlined } from '@ant-design/icons'
 import { useNavigate, useParams } from 'react-router-dom'
 import MarkdownView from '@/components/MarkdownView'
-import { createArticle, getArticleById, getMyCategories, updateArticle, uploadFile } from '@/api'
+import { createArticle, getAllTags, getArticleById, getMyCategories, updateArticle, uploadFile } from '@/api'
 import { ApiError } from '@/api/request'
-import type { ArticleCreateRequest, ArticleStatus, CategoryDTO } from '@/types'
+import type { ArticleCreateRequest, ArticleStatus, CategoryDTO, TagDTO } from '@/types'
 import { ROUTES } from '@/constants/routes'
 import { fileUrl } from '@/utils'
 
@@ -42,6 +42,7 @@ export default function WritePage() {
   const navigate = useNavigate()
   const [form] = Form.useForm<ArticleForm>()
   const [categories, setCategories] = useState<CategoryDTO[]>([])
+  const [allTags, setAllTags] = useState<TagDTO[]>([])
   const [loading, setLoading] = useState(isEdit)
   const [saving, setSaving] = useState(false)
   const [uploading, setUploading] = useState(false)
@@ -52,6 +53,8 @@ export default function WritePage() {
   useEffect(() => {
     // 只加载本人创建的收藏夹，避免看到其他用户创建的收藏夹
     getMyCategories().then(setCategories).catch(() => setCategories([]))
+    // 加载全部已有标签，供选择器联想（仍可输入新标签自动创建）
+    getAllTags().then(setAllTags).catch(() => setAllTags([]))
     if (articleId) {
       getArticleById(articleId)
         .then((a) => {
@@ -72,6 +75,7 @@ export default function WritePage() {
   }, [articleId, form])
 
   const categoryOptions = useMemo(() => categories.map((c) => ({ label: c.name ?? '', value: c.id! })), [categories])
+  const tagOptions = useMemo(() => allTags.map((t) => ({ label: t.name ?? '', value: t.name ?? '' })), [allTags])
 
   const customUpload = async (option: UploadRequestOption) => {
     setUploading(true)
@@ -161,7 +165,15 @@ export default function WritePage() {
               />
             </Form.Item>
             <Form.Item name="tags" label="标签">
-              <Select mode="tags" placeholder="输入后回车添加标签" tokenSeparators={[',']} />
+              <Select
+                mode="tags"
+                placeholder="输入后回车添加标签，可从已有标签中选择或新建"
+                tokenSeparators={[',']}
+                options={tagOptions}
+                filterOption={(input, option) =>
+                  String(option?.label ?? '').toLowerCase().includes(input.toLowerCase())
+                }
+              />
             </Form.Item>
             <Form.Item name="status" label="状态">
               <Radio.Group

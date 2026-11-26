@@ -3,13 +3,15 @@
  *
  * 结构刻意保持扁平：所有路由共用一个 SiteLayout，
  * 仅 RequireAuth / RequireAdmin 两个守卫组件，不再新增额外包装层。
+ *
+ * 登录态已从 AuthContext 迁移为 Zustand authStore（stores/authStore.ts）。
  */
 import { useEffect } from 'react'
 import { BrowserRouter, Navigate, Outlet, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { App as AntdApp, Button, ConfigProvider, Result, Spin, theme } from 'antd'
 import zhCN from 'antd/locale/zh_CN'
 import SiteLayout from '@/components/SiteLayout'
-import { AuthProvider, useAuth } from '@/context/AuthContext'
+import { useAuthStore } from '@/stores'
 import { setUnauthorizedHandler } from '@/api'
 import { ROUTES } from '@/constants/routes'
 import { ForgotPasswordPage, LoginPage, RegisterPage } from '@/pages/AuthPage'
@@ -27,7 +29,7 @@ import UserManagePage from '@/pages/admin/UserManagePage'
 /** 401 刷新失败后的统一处理：清状态并跳登录页 */
 function AuthBridge() {
   const navigate = useNavigate()
-  const { setUser } = useAuth()
+  const setUser = useAuthStore((s) => s.setUser)
   useEffect(() => {
     setUnauthorizedHandler(() => {
       setUser(null)
@@ -44,7 +46,8 @@ function FullScreenLoading() {
 
 /** 登录守卫 */
 function RequireAuth() {
-  const { isLoggedIn, loading } = useAuth()
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const loading = useAuthStore((s) => s.loading)
   const location = useLocation()
   if (loading) return <FullScreenLoading />
   return isLoggedIn
@@ -54,7 +57,8 @@ function RequireAuth() {
 
 /** 管理员守卫 */
 function RequireAdmin() {
-  const { isAdmin, loading } = useAuth()
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+  const loading = useAuthStore((s) => s.loading)
   if (loading) return <FullScreenLoading />
   return isAdmin ? <Outlet /> : <Navigate to={ROUTES.home} replace />
 }
@@ -69,6 +73,19 @@ function NotFound() {
       extra={<Button type="primary" onClick={() => navigate(ROUTES.home)}>返回首页</Button>}
     />
   )
+}
+
+/** 在应用最顶层初始化 authStore（恢复登录态），结束后才渲染路由守卫 */
+function AppBootstrap({ children }: { children: React.ReactNode }) {
+  const loading = useAuthStore((s) => s.loading)
+  const init = useAuthStore((s) => s.init)
+
+  useEffect(() => {
+    void init()
+  }, [init])
+
+  if (loading) return <FullScreenLoading />
+  return <>{children}</>
 }
 
 export default function App() {
@@ -89,7 +106,7 @@ export default function App() {
     >
       <AntdApp>
         <BrowserRouter>
-          <AuthProvider>
+          <AppBootstrap>
             <AuthBridge />
             <Routes>
               <Route element={<SiteLayout />}>
@@ -120,7 +137,7 @@ export default function App() {
                 <Route path="*" element={<NotFound />} />
               </Route>
             </Routes>
-          </AuthProvider>
+          </AppBootstrap>
         </BrowserRouter>
       </AntdApp>
     </ConfigProvider>

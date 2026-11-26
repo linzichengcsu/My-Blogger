@@ -16,9 +16,10 @@ import {
   UserOutlined,
 } from '@ant-design/icons'
 import { Outlet, useLocation, useNavigate, useSearchParams } from 'react-router-dom'
-import { useAuth } from '@/context/AuthContext'
+import { useAuthStore } from '@/stores'
 import { ROUTES } from '@/constants/routes'
 import { displayName, fileUrl } from '@/utils'
+import NotificationBell from './NotificationBell'
 
 const { Header, Content, Footer } = Layout
 const { Text } = Typography
@@ -36,7 +37,10 @@ export default function SiteLayout() {
   const navigate = useNavigate()
   const location = useLocation()
   const [searchParams] = useSearchParams()
-  const { user, isLoggedIn, isAdmin, logout } = useAuth()
+  const user = useAuthStore((s) => s.user)
+  const isLoggedIn = useAuthStore((s) => s.isLoggedIn)
+  const isAdmin = useAuthStore((s) => s.isAdmin)
+  const logout = useAuthStore((s) => s.logout)
   const [keyword, setKeyword] = useState(searchParams.get('keyword') ?? '')
 
   // 从详情页返回首页时同步 URL 中的搜索词
@@ -109,6 +113,7 @@ export default function SiteLayout() {
                   管理后台
                 </Button>
               )}
+              <NotificationBell />
               <Dropdown menu={{ items: userMenu, onClick: onUserMenuClick }} placement="bottomRight">
                 <Space size={8} style={{ cursor: 'pointer' }}>
                   <Avatar src={fileUrl(user?.avatar)} style={{ backgroundColor: '#fa541c' }}>
