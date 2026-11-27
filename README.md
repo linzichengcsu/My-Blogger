@@ -14,7 +14,8 @@
 [![Release](https://img.shields.io/badge/release-v1.1.0-green)](https://github.com/linzichengcsu/My-Blogger/releases)
 [![CI](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml/badge.svg)](https://github.com/linzichengcsu/My-Blogger/actions/workflows/backend-test.yml)
 
-行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 19** 构建的博客项目，提供用户认证、文章、分类、评论、文件上传、管理后台等完整博客能力。
+行吟博客 —— 基于 **Spring Boot 4.1.1** 与 **React 19** 构建的博客项目，提供用户认证、评论、文件上传评论、文件上传、管理后台等完整博客能力。目前项目已被收录到[XERJ Corpus Hub](https://hub.xerj.org/corpus/linzichengcsu--my-blogger)，为[XERJ](https://xerj.org/)提供数据支持。
+
 
 > **当前状态**：✅ v1.1.0 已公开发布，支持生产环境 Docker 部署。
 > **下一步规划**：考察微博、CSDN、掘金等博客类平台的功能，前后端同步调整代码。
